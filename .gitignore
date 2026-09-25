@@ -1,0 +1,30 @@
+﻿# ===== Backend =====
+backend/target/
+backend/.env
+backend/*.log
+backend/.mvn/
+!backend/.mvn/wrapper/maven-wrapper.jar
+backend/*.class
+
+# ===== Frontend =====
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# ===== IDE / OS =====
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ===== Logs =====
+*.log
+logs/
+
+# ===== Test files =====
+backend/verify_test.cjs
