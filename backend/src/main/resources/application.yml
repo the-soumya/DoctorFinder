@@ -29,7 +29,7 @@ spring:
 
 # Application-specific Custom Configurations
 app:
-  jwt:i
+  jwt:
     secret: ${JWT_SECRET}
     expiration-ms: 86400000
     refresh-expiration-ms: 604800000
