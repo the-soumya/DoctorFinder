@@ -130,7 +130,7 @@ export default function Register() {
               Create an Account
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-              Join CityHealth as a Patient, Doctor, or Clinic Staff
+              Join AuraHealth as a Patient, Doctor, or Clinic Staff
             </p>
           </div>
 

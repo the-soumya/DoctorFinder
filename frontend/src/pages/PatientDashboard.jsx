@@ -428,7 +428,7 @@ export default function PatientDashboard() {
             }}>
               <QRCodeSVG
                 value={JSON.stringify({
-                  hospital: 'CityHealth Medical Center',
+                  hospital: 'AuraHealth Medical Center',
                   appointmentId: viewQrAppt.id,
                   doctor: formatDoctorName(viewQrAppt.doctorName),
                   patientEmail: user?.email,

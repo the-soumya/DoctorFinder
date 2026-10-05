@@ -74,7 +74,7 @@ export default function Navbar() {
               fontWeight: 800,
               color: 'var(--text-primary)',
               letterSpacing: '-0.02em'
-            }}>CityHealth</span>
+            }}>AuraHealth</span>
             <span style={{ fontSize: '0.65rem', display: 'block', color: 'var(--text-muted)', letterSpacing: '0.04em', fontWeight: 700 }}>
               HOSPITAL & TELEHEALTH PORTAL
             </span>

@@ -183,7 +183,7 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
     const chosenDay = days[selectedDate];
     const appointmentToken = heldAppointment?.id || Math.floor(Math.random() * 90000 + 10000);
     const passData = {
-      hospital: 'CityHealth Medical Center',
+      hospital: 'AuraHealth Medical Center',
       appointmentId: appointmentToken,
       patientName: user?.name || 'Registered Patient',
       patientEmail: user?.email || 'patient@health.com',
@@ -528,7 +528,7 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
                 boxShadow: 'var(--shadow-sm)'
               }}>
                 <QRCodeSVG
-                  value={qrPayload || 'CityHealth-Pass'}
+                  value={qrPayload || 'AuraHealth-Pass'}
                   size={150}
                   level="H"
                   includeMargin={true}

@@ -74,7 +74,7 @@ export default function Home() {
           marginBottom: '1.25rem'
         }}>
           <Heart size={16} fill="var(--primary)" />
-          <span>CityHealth Hospital & Telehealth Network</span>
+          <span>AuraHealth Hospital & Telehealth Network</span>
         </div>
 
         <h1 style={{
