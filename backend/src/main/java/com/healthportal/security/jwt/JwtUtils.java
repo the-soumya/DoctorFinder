@@ -62,12 +62,15 @@ public class JwtUtils {
     }
 
     public String getUserNameFromJwtToken(String token) {
+        return getClaimsFromJwtToken(token).getSubject();
+    }
+
+    public Claims getClaimsFromJwtToken(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
                 .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
+                .getPayload();
     }
 
     public boolean validateJwtToken(String authToken) {

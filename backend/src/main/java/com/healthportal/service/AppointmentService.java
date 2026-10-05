@@ -152,6 +152,15 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + appointmentId));
 
+        boolean isPatient = appointment.getPatient().getId().equals(requestingUserId);
+        boolean isAssignedDoctor = appointment.getDoctor().getUser().getId().equals(requestingUserId);
+        User requestingUser = userRepository.findById(requestingUserId).orElse(null);
+        boolean isAdmin = requestingUser != null && requestingUser.getRole() == Role.ROLE_ADMIN;
+
+        if (!isPatient && !isAssignedDoctor && !isAdmin) {
+            throw new ForbiddenException("Unauthorized: You do not have permission to reschedule this appointment.");
+        }
+
         Optional<Appointment> conflicting = appointmentRepository.findConflictingSlotWithLock(
                 appointment.getDoctor().getId(), newSlotDatetime);
 
@@ -186,15 +195,31 @@ public class AppointmentService {
                 .collect(Collectors.toList());
     }
 
-    public List<AppointmentDto> getDoctorAppointments(Long doctorId) {
+    public List<AppointmentDto> getDoctorAppointments(Long doctorId, Long requestingUserId, Role role) {
+        if (role == Role.ROLE_DOCTOR) {
+            Doctor doctor = doctorRepository.findByUserId(requestingUserId)
+                    .orElseThrow(() -> new ForbiddenException("Doctor profile not found for user ID: " + requestingUserId));
+            if (!doctor.getId().equals(doctorId)) {
+                throw new ForbiddenException("Access denied: You can only view your own patient appointments.");
+            }
+        }
         return appointmentRepository.findByDoctorIdOrderBySlotDatetimeDesc(doctorId).stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
 
-    public AppointmentDto getAppointmentById(Long appointmentId) {
+    public AppointmentDto getAppointmentById(Long appointmentId, Long requestingUserId, Role role) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + appointmentId));
+
+        boolean isPatient = appointment.getPatient().getId().equals(requestingUserId);
+        boolean isDoctor = appointment.getDoctor().getUser().getId().equals(requestingUserId);
+        boolean isStaff = role == Role.ROLE_ADMIN || role == Role.ROLE_PHARMACIST_RECEPTIONIST;
+
+        if (!isPatient && !isDoctor && !isStaff) {
+            throw new ForbiddenException("Unauthorized: You do not have permission to access this appointment.");
+        }
+
         return mapToDto(appointment);
     }
 

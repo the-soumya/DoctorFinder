@@ -179,9 +179,8 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
       origin: { y: 0.6 }
     });
 
-    // Generate secure QR Check-in payload
     const chosenDay = days[selectedDate];
-    const appointmentToken = heldAppointment?.id || Math.floor(Math.random() * 90000 + 10000);
+    const appointmentToken = heldAppointment?.id;
     const passData = {
       hospital: 'AuraHealth Medical Center',
       appointmentId: appointmentToken,
@@ -190,9 +189,9 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
       doctor: docName,
       department: doctor?.departmentName,
       slot: `${chosenDay.dateFormatted} at ${selectedTime.substring(0, 5)}`,
-      paymentId: paymentId,
+      paymentId: paymentId || 'CONFIRMED',
       status: 'CONFIRMED_PAID',
-      qrSecurityCode: `CHK-${appointmentToken}-${Date.now().toString().slice(-6)}`
+      qrSecurityCode: `AURA-CHK-${appointmentToken}-${paymentId ? paymentId.slice(-8) : Date.now().toString().slice(-6)}`
     };
 
     setQrPayload(JSON.stringify(passData));

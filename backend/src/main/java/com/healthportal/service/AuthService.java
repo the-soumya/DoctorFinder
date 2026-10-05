@@ -67,6 +67,7 @@ public class AuthService {
         }
 
         Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", userDetails.getId());
         claims.put("role", userDetails.getRole().name());
         claims.put("name", userDetails.getName());
 
@@ -163,6 +164,7 @@ public class AuthService {
 
         // Generate tokens for approved users (e.g. patients)
         Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", user.getId());
         claims.put("role", user.getRole().name());
         claims.put("name", user.getName());
 
@@ -180,6 +182,7 @@ public class AuthService {
                     .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
 
             Map<String, Object> claims = new HashMap<>();
+            claims.put("userId", user.getId());
             claims.put("role", user.getRole().name());
             claims.put("name", user.getName());
 

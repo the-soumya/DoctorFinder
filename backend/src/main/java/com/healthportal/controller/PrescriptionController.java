@@ -54,11 +54,12 @@ public class PrescriptionController {
     }
 
     @GetMapping("/appointment/{appointmentId}")
-    @Operation(summary = "Get prescription for appointment (Medical notes automatically redacted for Pharmacy/Reception role)")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get prescription for appointment with BOLA ownership check (Medical notes automatically redacted for Pharmacy/Reception role)")
     public ResponseEntity<PrescriptionDto> getPrescriptionByAppointment(
             @PathVariable Long appointmentId,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
-        return ResponseEntity.ok(prescriptionService.getPrescriptionByAppointmentId(appointmentId, userDetails.getRole()));
+        return ResponseEntity.ok(prescriptionService.getPrescriptionByAppointmentId(appointmentId, userDetails.getId(), userDetails.getRole()));
     }
 
     @GetMapping("/my")

@@ -127,8 +127,8 @@ public class PaymentService {
 
             if (generatedSignature.equals(request.getRazorpaySignature())) {
                 signatureValid = true;
-            } else if (mockMode || request.getRazorpayOrderId().startsWith("order_rzp_") || request.getRazorpayOrderId().startsWith("order_sim_")) {
-                // In demo / sandbox simulation mode, accept simulation signatures
+            } else if (mockMode) {
+                logger.warn("Mock mode active: accepting simulated Razorpay signature for order: {}", request.getRazorpayOrderId());
                 signatureValid = true;
             }
         } catch (Exception e) {

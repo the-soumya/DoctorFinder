@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 import { 
   Heart, 
   MapPin, 
@@ -14,48 +15,70 @@ import {
   Clock,
   Star,
   QrCode,
-  UserCheck
+  UserCheck,
+  Loader2
 } from 'lucide-react';
 import { formatDoctorName, formatCurrency } from '../utils/formatters';
 
+const DEFAULT_FEATURED = [
+  {
+    id: 1,
+    name: 'Vikram Sharma',
+    degree: 'MBBS, MD, DM (Cardiology, AIIMS)',
+    specialization: 'Senior Cardiologist',
+    consultationFee: 800,
+    rating: 4.9,
+    experienceYears: 14,
+    photoUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400'
+  },
+  {
+    id: 2,
+    name: 'Priya Deshmukh',
+    degree: 'MBBS, MD (Dermatology)',
+    specialization: 'Consultant Dermatologist',
+    consultationFee: 600,
+    rating: 4.8,
+    experienceYears: 9,
+    photoUrl: 'https://images.unsplash.com/photo-1594824813501-5264b304c45b?auto=format&fit=crop&q=80&w=400'
+  },
+  {
+    id: 5,
+    name: 'Alok Nath',
+    degree: 'MBBS, MD (Internal Medicine)',
+    specialization: 'Senior Family Physician',
+    consultationFee: 500,
+    rating: 4.8,
+    experienceYears: 15,
+    photoUrl: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=400'
+  }
+];
+
 export default function Home() {
   const { user } = useAuth();
+  const [featuredDoctors, setFeaturedDoctors] = useState(DEFAULT_FEATURED);
+  const [loadingDoctors, setLoadingDoctors] = useState(true);
 
-  const featuredDoctors = [
-    {
-      id: 1,
-      name: 'Vikram Sharma',
-      degree: 'MBBS, MD, DM (Cardiology, AIIMS)',
-      specialization: 'Senior Cardiologist',
-      department: 'Cardiology',
-      fee: 800,
-      rating: 4.9,
-      experience: 14,
-      photo: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400'
-    },
-    {
-      id: 2,
-      name: 'Priya Deshmukh',
-      degree: 'MBBS, MD (Dermatology)',
-      specialization: 'Consultant Dermatologist',
-      department: 'Dermatology',
-      fee: 600,
-      rating: 4.8,
-      experience: 9,
-      photo: 'https://images.unsplash.com/photo-1594824813501-5264b304c45b?auto=format&fit=crop&q=80&w=400'
-    },
-    {
-      id: 5,
-      name: 'Alok Nath',
-      degree: 'MBBS, MD (Internal Medicine)',
-      specialization: 'Senior Family Physician',
-      department: 'General Medicine',
-      fee: 500,
-      rating: 4.8,
-      experience: 15,
-      photo: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=400'
-    }
-  ];
+  useEffect(() => {
+    let isMounted = true;
+    api.get('/doctors')
+      .then(res => {
+        if (isMounted && Array.isArray(res.data) && res.data.length > 0) {
+          // Sort by highest rating, then highest experience
+          const sorted = [...res.data]
+            .sort((a, b) => ((b.rating || 0) - (a.rating || 0)) || ((b.experienceYears || 0) - (a.experienceYears || 0)))
+            .slice(0, 3);
+          setFeaturedDoctors(sorted);
+        }
+      })
+      .catch(err => {
+        console.warn('Using default featured doctors list:', err.message);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingDoctors(false);
+      });
+
+    return () => { isMounted = false; };
+  }, []);
 
   return (
     <div className="container" style={{ padding: '3rem 1.25rem' }}>
@@ -131,7 +154,7 @@ export default function Home() {
             <div key={doc.id} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
                 <img
-                  src={doc.photo}
+                  src={doc.photoUrl || doc.photo}
                   alt={doc.name}
                   style={{
                     width: '64px',
@@ -169,13 +192,13 @@ export default function Home() {
                 <div>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Fee: </span>
                   <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary)' }}>
-                    {formatCurrency(doc.fee)}
+                    {formatCurrency(doc.consultationFee || doc.fee)}
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: '#D97706', fontWeight: 700 }}>
                   <Star size={14} fill="#D97706" />
                   <span>{doc.rating}</span>
-                  <span style={{ color: 'var(--text-muted)' }}>({doc.experience}y exp)</span>
+                  <span style={{ color: 'var(--text-muted)' }}>({doc.experienceYears || doc.experience || 5}y exp)</span>
                 </div>
               </div>
 

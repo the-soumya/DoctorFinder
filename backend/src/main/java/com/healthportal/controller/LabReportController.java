@@ -1,7 +1,10 @@
 package com.healthportal.controller;
 
 import com.healthportal.dto.ai.LabReportSummaryDto;
+import com.healthportal.dto.lab.LabReportDto;
 import com.healthportal.entity.LabReport;
+import com.healthportal.entity.Role;
+import com.healthportal.exception.ForbiddenException;
 import com.healthportal.repository.LabReportRepository;
 import com.healthportal.security.services.UserDetailsImpl;
 import com.healthportal.service.AiService;
@@ -16,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/lab-reports")
@@ -43,14 +47,36 @@ public class LabReportController {
     @GetMapping("/my")
     @PreAuthorize("hasRole('PATIENT')")
     @Operation(summary = "Get current patient's lab reports")
-    public ResponseEntity<List<LabReport>> getMyReports(@AuthenticationPrincipal UserDetailsImpl userDetails) {
-        return ResponseEntity.ok(labReportRepository.findByPatientIdOrderByUploadedAtDesc(userDetails.getId()));
+    public ResponseEntity<List<LabReportDto>> getMyReports(@AuthenticationPrincipal UserDetailsImpl userDetails) {
+        List<LabReport> reports = labReportRepository.findByPatientIdOrderByUploadedAtDesc(userDetails.getId());
+        return ResponseEntity.ok(reports.stream().map(this::mapToDto).collect(Collectors.toList()));
     }
 
     @GetMapping("/patient/{patientId}")
     @PreAuthorize("hasRole('DOCTOR') or hasRole('ADMIN') or hasRole('PATIENT')")
-    @Operation(summary = "Get lab reports for specific patient (Doctor or Admin)")
-    public ResponseEntity<List<LabReport>> getReportsByPatient(@PathVariable Long patientId) {
-        return ResponseEntity.ok(labReportRepository.findByPatientIdOrderByUploadedAtDesc(patientId));
+    @Operation(summary = "Get lab reports for specific patient with strict IDOR verification")
+    public ResponseEntity<List<LabReportDto>> getReportsByPatient(
+            @PathVariable Long patientId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        // Enforce strict BOLA / IDOR protection
+        if (userDetails.getRole() == Role.ROLE_PATIENT && !userDetails.getId().equals(patientId)) {
+            throw new ForbiddenException("Unauthorized: You do not have permission to view other patients' lab reports.");
+        }
+
+        List<LabReport> reports = labReportRepository.findByPatientIdOrderByUploadedAtDesc(patientId);
+        return ResponseEntity.ok(reports.stream().map(this::mapToDto).collect(Collectors.toList()));
+    }
+
+    private LabReportDto mapToDto(LabReport report) {
+        return new LabReportDto(
+                report.getId(),
+                report.getPatient().getId(),
+                report.getPatient().getName(),
+                report.getFileName(),
+                report.getFileUrl(),
+                report.getFileType(),
+                report.getExtractedSummary(),
+                report.getUploadedAt()
+        );
     }
 }

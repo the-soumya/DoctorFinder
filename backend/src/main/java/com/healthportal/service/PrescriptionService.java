@@ -9,6 +9,7 @@ import com.healthportal.dto.prescription.PrescriptionRequest;
 import com.healthportal.entity.*;
 import com.healthportal.exception.BadRequestException;
 import com.healthportal.exception.ConflictException;
+import com.healthportal.exception.ForbiddenException;
 import com.healthportal.exception.ResourceNotFoundException;
 import com.healthportal.repository.AllergyMedicationHistoryRepository;
 import com.healthportal.repository.AppointmentRepository;
@@ -214,9 +215,18 @@ public class PrescriptionService {
         return mapToDto(prescription, true);
     }
 
-    public PrescriptionDto getPrescriptionByAppointmentId(Long appointmentId, Role viewerRole) {
+    public PrescriptionDto getPrescriptionByAppointmentId(Long appointmentId, Long requestingUserId, Role viewerRole) {
         Prescription prescription = prescriptionRepository.findByAppointmentId(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("No prescription found for appointment ID: " + appointmentId));
+
+        Appointment appt = prescription.getAppointment();
+        boolean isPatient = appt.getPatient().getId().equals(requestingUserId);
+        boolean isDoctor = appt.getDoctor().getUser().getId().equals(requestingUserId);
+        boolean isStaff = viewerRole == Role.ROLE_ADMIN || viewerRole == Role.ROLE_PHARMACIST_RECEPTIONIST;
+
+        if (!isPatient && !isDoctor && !isStaff) {
+            throw new ForbiddenException("Unauthorized: You do not have permission to view this prescription.");
+        }
 
         // Read-only on medical notes for Pharmacist/Receptionist: mask diagnosisNotes
         boolean maskMedicalNotes = (viewerRole == Role.ROLE_PHARMACIST_RECEPTIONIST);

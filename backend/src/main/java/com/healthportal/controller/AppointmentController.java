@@ -69,9 +69,11 @@ public class AppointmentController {
 
     @GetMapping("/doctor/{doctorId}")
     @PreAuthorize("hasRole('DOCTOR') or hasRole('ADMIN') or hasRole('PHARMACIST_RECEPTIONIST')")
-    @Operation(summary = "Get list of appointments assigned to a specific doctor")
-    public ResponseEntity<List<AppointmentDto>> getDoctorAppointments(@PathVariable Long doctorId) {
-        return ResponseEntity.ok(appointmentService.getDoctorAppointments(doctorId));
+    @Operation(summary = "Get list of appointments assigned to a specific doctor with strict ownership check")
+    public ResponseEntity<List<AppointmentDto>> getDoctorAppointments(
+            @PathVariable Long doctorId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        return ResponseEntity.ok(appointmentService.getDoctorAppointments(doctorId, userDetails.getId(), userDetails.getRole()));
     }
 
     @GetMapping
@@ -82,8 +84,11 @@ public class AppointmentController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get single appointment by ID")
-    public ResponseEntity<AppointmentDto> getAppointmentById(@PathVariable Long id) {
-        return ResponseEntity.ok(appointmentService.getAppointmentById(id));
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get single appointment by ID with BOLA protection")
+    public ResponseEntity<AppointmentDto> getAppointmentById(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        return ResponseEntity.ok(appointmentService.getAppointmentById(id, userDetails.getId(), userDetails.getRole()));
     }
 }
