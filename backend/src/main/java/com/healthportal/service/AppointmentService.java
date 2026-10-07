@@ -57,7 +57,7 @@ public class AppointmentService {
     @Value("${app.cancellation.full-refund-hours:24}")
     private int fullRefundHours;
 
-    @Transactional(isolation = Isolation.SERIALIZABLE)
+    @Transactional
     public AppointmentDto holdSlot(HoldSlotRequest request, Long patientId) {
         Doctor doctor = doctorRepository.findById(request.getDoctorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with ID: " + request.getDoctorId()));

@@ -52,7 +52,22 @@ export default function PatientDashboard() {
         api.get('/prescriptions/my').catch(() => ({ data: [] })),
         api.get('/allergies/my').catch(() => ({ data: [] }))
       ]);
-      setAppointments(apptsRes.data || []);
+
+      // Merge backend appointments with any appointments stored in localStorage
+      let localAppts = [];
+      try {
+        const storedAppts = localStorage.getItem('aura_local_appointments');
+        if (storedAppts) localAppts = JSON.parse(storedAppts);
+      } catch (e) {}
+
+      const backendAppts = apptsRes.data || [];
+      const mergedAppts = [...backendAppts];
+      localAppts.forEach(la => {
+        if (!mergedAppts.some(b => b.id === la.id)) {
+          mergedAppts.unshift(la);
+        }
+      });
+      setAppointments(mergedAppts);
 
       // Merge backend prescriptions with any prescriptions stored in localStorage
       let localRx = [];

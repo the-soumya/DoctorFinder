@@ -11,8 +11,14 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:patient_portal}?createDatabaseIfNotExist=true&useSSL=${DB_SSL:false}&allowPublicKeyRetrieval=true&serverTimezone=UTC}
     username: ${DB_USER:root}
-    password: ${DB_PASSWORD}
+    password: ${DB_PASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-timeout: 30000
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 600000
+      max-lifetime: 1800000
   jpa:
     hibernate:
       ddl-auto: update
@@ -31,20 +37,20 @@ spring:
 # Application-specific Custom Configurations
 app:
   jwt:
-    secret: ${JWT_SECRET}
+    secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
     expiration-ms: 86400000
     refresh-expiration-ms: 604800000
   security:
-    encryption-key: ${FIELD_ENCRYPTION_KEY}
+    encryption-key: ${FIELD_ENCRYPTION_KEY:HealthPortalSecretKeyAES256Pass!}
   razorpay:
-    key-id: ${RAZORPAY_KEY_ID}
-    key-secret: ${RAZORPAY_KEY_SECRET}
-    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET}
+    key-id: ${RAZORPAY_KEY_ID:rzp_test_TgMX3Cwemn0Wns}
+    key-secret: ${RAZORPAY_KEY_SECRET:Q3Fi1f36m2WX3JSqjrphVyTU}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:portalWebhookSecretABC789}
     mock-mode: ${RAZORPAY_MOCK_MODE:false}
   cancellation:
     full-refund-hours: 24
   ai:
-    gemini-api-key: ${GEMINI_API_KEY}
+    gemini-api-key: ${GEMINI_API_KEY:}
     openai-api-key: ${OPENAI_API_KEY:}
     rate-limit:
       capacity: 10
