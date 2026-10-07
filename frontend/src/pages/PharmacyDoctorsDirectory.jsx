@@ -143,7 +143,7 @@ export default function PharmacyDoctorsDirectory() {
           </div>
           <h1 style={{ fontSize: '2.1rem', fontWeight: 800 }}>Doctors Directory & Contacts by Locality</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-            Direct phone and email contact directory of specialist medical practitioners across localities in Uttarpara, Konnagar, Howrah, Kolkata, and Bangalore.
+            Direct phone and email contact directory of specialist medical practitioners across localities in Uttarpara, Konnagar, Howrah, and Kolkata.
           </p>
         </div>
 

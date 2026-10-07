@@ -147,7 +147,7 @@ export default function Home() {
     return matchesCity && matchesSearch && matchesChamber;
   });
 
-  const cities = ['All', 'Uttarpara', 'Konnagar', 'Howrah', 'Kolkata', 'Bengaluru'];
+  const cities = ['All', 'Uttarpara', 'Konnagar', 'Howrah', 'Kolkata'];
 
   return (
     <div className="container" style={{ padding: '3rem 1.25rem' }}>
@@ -917,7 +917,7 @@ export default function Home() {
           </div>
           <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.5rem' }}>Pharmacy Chambers</h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
-            Outpatient visiting chambers across Uttarpara, Howrah, Kolkata, and Bangalore with verified doctor sitting schedules.
+            Outpatient visiting chambers across Uttarpara, Konnagar, Howrah, and Kolkata with verified doctor sitting schedules.
           </p>
         </div>
 

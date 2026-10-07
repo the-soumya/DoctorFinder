@@ -34,10 +34,10 @@ public class Doctor {
     private Double longitude;
 
     @Column(length = 80)
-    private String city = "Bengaluru";
+    private String city = "Uttarpara";
 
     @Column(length = 80)
-    private String district = "Bengaluru Urban";
+    private String district = "Hooghly";
 
     @Column(length = 80)
     private String state = "West Bengal";

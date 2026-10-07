@@ -454,7 +454,6 @@ export default function Register() {
                       <option value="Konnagar">Konnagar</option>
                       <option value="Howrah">Howrah</option>
                       <option value="Kolkata">Kolkata</option>
-                      <option value="Bengaluru">Bengaluru</option>
                     </select>
                   </div>
 

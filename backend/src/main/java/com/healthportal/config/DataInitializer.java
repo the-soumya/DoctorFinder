@@ -1572,37 +1572,6 @@ public class DataInitializer implements CommandLineRunner {
         upsertSlot(pKolkata, "dr.anupam@hospital.com", "Tue, Thu", "06:30 PM - 08:00 PM", "Chamber 1", new BigDecimal("800.00"), 20);
         upsertSlot(pKolkata, "dr.sharmistha@hospital.com", "Wed, Fri", "04:30 PM - 06:30 PM", "Chamber 2", new BigDecimal("500.00"), 20);
 
-        // 5. Bengaluru Chambers
-        upsertPharmacy(
-                "MedPlus Pharmacy & Specialist Chamber - Indiranagar",
-                "KA-PHA-2024-9401",
-                "bengaluru.pharmacy@health.com",
-                "100 Feet Road, HAL 2nd Stage, Indiranagar, Bengaluru",
-                "Bengaluru",
-                "Bengaluru Urban",
-                "Karnataka",
-                "Indiranagar",
-                12.9716,
-                77.6412,
-                "+91 98800 33445",
-                "08:00 AM - 10:30 PM"
-        );
-
-        upsertPharmacy(
-                "Apollo Pharmacy & Wellness Chamber - Koramangala",
-                "KA-PHA-2024-9402",
-                "koramangala.pharmacy@health.com",
-                "Koramangala 4th Block, 80 Feet Road, Bengaluru",
-                "Bengaluru",
-                "Bengaluru Urban",
-                "Karnataka",
-                "Koramangala",
-                12.9352,
-                77.6245,
-                "+91 98800 55667",
-                "08:00 AM - 11:00 PM"
-        );
-
         // Seed a sample chamber appointment for patient1 at Makhla Medicare if none exists for that pharmacy
         User patient1 = userRepository.findByEmail("patient@health.com").orElse(null);
         Optional<Doctor> docSharma = doctorRepository.findAll().stream()

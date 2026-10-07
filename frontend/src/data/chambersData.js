@@ -1,4 +1,4 @@
-// Real-world visiting doctor chambers & polyclinic pharmacies across Uttarpara, Konnagar, Howrah, Kolkata, and Bengaluru
+// Real-world visiting doctor chambers & polyclinic pharmacies across Uttarpara, Konnagar, Howrah, and Kolkata
 export const DEFAULT_REAL_CHAMBERS = [
   {
     id: 1,
@@ -428,72 +428,6 @@ export const DEFAULT_REAL_CHAMBERS = [
         maxTokens: 20
       }
     ]
-  },
-  {
-    id: 9,
-    name: "MedPlus Pharmacy & Specialist Chamber - Indiranagar",
-    shortName: "MedPlus Indiranagar",
-    licenseNumber: "KA-PHA-2024-9911",
-    address: "100 Feet Road, HAL 2nd Stage, Indiranagar",
-    city: "Bengaluru",
-    district: "Bengaluru Urban",
-    state: "Karnataka",
-    locality: "Indiranagar",
-    latitude: 12.9784,
-    longitude: 77.6408,
-    phone: "+91 98451 44556",
-    operatingHours: "08:00 AM - 10:00 PM",
-    isApproved: true,
-    slots: [
-      {
-        id: 901,
-        slotId: 901,
-        doctorId: 11,
-        doctorName: "Rajesh Kulkarni",
-        degree: "MBBS, MD, DM (Cardiology)",
-        specialization: "Senior Interventional Cardiologist",
-        departmentName: "Cardiology",
-        photoUrl: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400",
-        availableDays: "Mon, Wed, Fri",
-        timeSlot: "06:00 PM - 08:00 PM",
-        chamberRoom: "Chamber 1",
-        consultationFee: 850.0,
-        maxTokens: 20
-      }
-    ]
-  },
-  {
-    id: 10,
-    name: "Apollo Pharmacy & Wellness Chamber - Koramangala",
-    shortName: "Apollo Koramangala",
-    licenseNumber: "KA-PHA-2024-9912",
-    address: "80 Feet Road, 4th Block, Koramangala",
-    city: "Bengaluru",
-    district: "Bengaluru Urban",
-    state: "Karnataka",
-    locality: "Koramangala",
-    latitude: 12.9352,
-    longitude: 77.6245,
-    phone: "+91 98451 55667",
-    operatingHours: "07:30 AM - 10:30 PM",
-    isApproved: true,
-    slots: [
-      {
-        id: 1001,
-        slotId: 1001,
-        doctorId: 12,
-        doctorName: "Preeti Venkat",
-        degree: "MBBS, MD (Medicine)",
-        specialization: "Senior Consultant Physician",
-        departmentName: "General Medicine",
-        photoUrl: "https://images.unsplash.com/photo-1594824813593-9c8651a02914?auto=format&fit=crop&q=80&w=400",
-        availableDays: "Mon to Sat",
-        timeSlot: "10:00 AM - 12:30 PM",
-        chamberRoom: "Chamber 2",
-        consultationFee: 700.0,
-        maxTokens: 25
-      }
-    ]
   }
 ];
 
@@ -728,49 +662,5 @@ export const DEFAULT_REAL_DOCTORS = [
     state: "West Bengal",
     locality: "Salt Lake Sector 1",
     clinicAddress: "Apollo Pharmacy & Visiting Chamber - Salt Lake, Sector 1"
-  },
-  {
-    id: 11,
-    name: "Kunal Ghosh",
-    degree: "MBBS, MD, DM (Cardiology)",
-    specialization: "Consultant Cardiologist",
-    departmentName: "Cardiology",
-    departmentId: 1,
-    phone: "+91 98790 38551",
-    email: "dr.kunal@hospital.com",
-    consultationFee: 850.0,
-    rating: 4.8,
-    experienceYears: 13,
-    latitude: 12.9716,
-    longitude: 77.6412,
-    photoUrl: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=400",
-    bio: "Preventive cardiology and cardiac rehabilitation specialist.",
-    city: "Bengaluru",
-    district: "Bengaluru Urban",
-    state: "Karnataka",
-    locality: "Indiranagar",
-    clinicAddress: "MedPlus Pharmacy & Specialist Chamber, 100 Feet Road, Indiranagar"
-  },
-  {
-    id: 12,
-    name: "Preeti Venkat",
-    degree: "MBBS, MD (Medicine)",
-    specialization: "Senior Consultant Physician",
-    departmentName: "General Medicine",
-    departmentId: 2,
-    phone: "+91 98961 20935",
-    email: "dr.preeti@hospital.com",
-    consultationFee: 700.0,
-    rating: 4.9,
-    experienceYears: 14,
-    latitude: 12.9352,
-    longitude: 77.6245,
-    photoUrl: "https://images.unsplash.com/photo-1594824813593-9c8651a02914?auto=format&fit=crop&q=80&w=400",
-    bio: "Internal medicine specialist managing chronic illness, diabetes, and geriatrics.",
-    city: "Bengaluru",
-    district: "Bengaluru Urban",
-    state: "Karnataka",
-    locality: "Koramangala",
-    clinicAddress: "Apollo Pharmacy & Wellness Chamber, Koramangala 4th Block"
   }
 ];

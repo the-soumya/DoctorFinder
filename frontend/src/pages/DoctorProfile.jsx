@@ -284,7 +284,9 @@ export default function DoctorProfile() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                 <MapPin size={16} color="var(--primary)" />
-                <span>Bangalore Hospital Campus (Lat: {doctor?.latitude}, Lon: {doctor?.longitude})</span>
+                <span>
+                  {doctor?.clinicAddress || (doctor?.locality ? `${doctor.locality}, ${doctor?.city || ''}` : `${doctor?.city || 'Visiting Chamber'} Campus`)} (Lat: {doctor?.latitude}, Lon: {doctor?.longitude})
+                </span>
               </div>
             </div>
           </div>
