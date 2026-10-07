@@ -1448,6 +1448,7 @@ public class DataInitializer implements CommandLineRunner {
         upsertSlot(pMakhla, "dr.rupa@hospital.com", "Tue, Thu, Sat", "12:00 PM - 01:30 PM", "Chamber 1", new BigDecimal("500.00"), 20);
         upsertSlot(pMakhla, "dr.sharma@hospital.com", "Mon, Wed, Fri", "07:00 PM - 08:30 PM", "Chamber 1", new BigDecimal("750.00"), 20);
         upsertSlot(pMakhla, "dr.sharmila@hospital.com", "Sunday", "10:00 AM - 12:30 PM", "Chamber 3", new BigDecimal("800.00"), 15);
+        upsertSlot(pMakhla, "dr.sayan@hospital.com", "Sunday", "09:30 AM - 12:00 PM", "Chamber 1", new BigDecimal("650.00"), 20);
 
         Pharmacy pBhadrakali = upsertPharmacy(
                 "Bhadrakali Polyclinic & Medicine House",

@@ -38,6 +38,8 @@ export default function Home() {
   const [chamberSearch, setChamberSearch] = useState('');
   const [doctorSearch, setDoctorSearch] = useState('');
   const [bookingDoctor, setBookingDoctor] = useState(null);
+  const [bookingChamber, setBookingChamber] = useState(null);
+  const [bookingSlot, setBookingSlot] = useState(null);
 
   // Auto-scroll to visiting chamber network if route is /chambers or #chambers-section
   useEffect(() => {
@@ -49,7 +51,7 @@ export default function Home() {
     }
   }, [location.pathname, location.hash]);
 
-  const handleBookDoctor = (doc) => {
+  const handleBookDoctor = (doc, chamber = null, slot = null) => {
     if (!user) {
       navigate('/login', {
         state: {
@@ -60,6 +62,8 @@ export default function Home() {
       return;
     }
     setBookingDoctor(doc);
+    setBookingChamber(chamber);
+    setBookingSlot(slot);
   };
 
   const handleBookSlotForDoctor = (pharmacy, slot) => {
@@ -739,8 +743,31 @@ export default function Home() {
                         const slots = ch.slots || ch.visitingDoctors || [];
                         const s = slots.find(slot => slot.doctorId === doc.id);
                         return (
-                          <div key={ch.id || ch.name} style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span>🏥 {ch.shortName || ch.name}</span>
+                          <div
+                            key={ch.id || ch.name}
+                            onClick={() => handleBookDoctor(doc, ch, s)}
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              color: 'var(--text-primary)',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: '3px 6px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              transition: 'background 0.15s ease'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(2, 132, 199, 0.12)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            title={`Choose slot at ${ch.shortName || ch.name}`}
+                          >
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <span>🏥 {ch.shortName || ch.name}</span>
+                              <span style={{ fontSize: '0.65rem', color: 'var(--primary)', fontWeight: 700, background: 'var(--primary-subtle)', padding: '1px 5px', borderRadius: '3px' }}>
+                                Choose
+                              </span>
+                            </span>
                             {s?.timeSlot && <span style={{ color: 'var(--primary)', fontWeight: 700 }}>⏰ {s.timeSlot}</span>}
                           </div>
                         );
@@ -1041,8 +1068,18 @@ export default function Home() {
       {bookingDoctor && (
         <SlotBookingModal
           doctor={bookingDoctor}
-          onClose={() => setBookingDoctor(null)}
-          onBookingSuccess={() => setBookingDoctor(null)}
+          initialChamber={bookingChamber}
+          initialSlot={bookingSlot}
+          onClose={() => {
+            setBookingDoctor(null);
+            setBookingChamber(null);
+            setBookingSlot(null);
+          }}
+          onBookingSuccess={() => {
+            setBookingDoctor(null);
+            setBookingChamber(null);
+            setBookingSlot(null);
+          }}
         />
       )}
     </div>

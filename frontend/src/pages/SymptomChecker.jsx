@@ -33,8 +33,10 @@ export default function SymptomChecker() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedDoctorForBooking, setSelectedDoctorForBooking] = useState(null);
+  const [selectedChamberForBooking, setSelectedChamberForBooking] = useState(null);
+  const [selectedSlotForBooking, setSelectedSlotForBooking] = useState(null);
 
-  const handleBookDoctor = (doc) => {
+  const handleBookDoctor = (doc, chamber = null, slot = null) => {
     if (!user) {
       navigate('/login', {
         state: {
@@ -45,6 +47,8 @@ export default function SymptomChecker() {
       return;
     }
     setSelectedDoctorForBooking(doc);
+    setSelectedChamberForBooking(chamber);
+    setSelectedSlotForBooking(slot);
   };
 
   const sampleSymptoms = [
@@ -600,9 +604,17 @@ export default function SymptomChecker() {
       {selectedDoctorForBooking && (
         <SlotBookingModal
           doctor={selectedDoctorForBooking}
-          onClose={() => setSelectedDoctorForBooking(null)}
+          initialChamber={selectedChamberForBooking}
+          initialSlot={selectedSlotForBooking}
+          onClose={() => {
+            setSelectedDoctorForBooking(null);
+            setSelectedChamberForBooking(null);
+            setSelectedSlotForBooking(null);
+          }}
           onBookingSuccess={() => {
-            // Success callback
+            setSelectedDoctorForBooking(null);
+            setSelectedChamberForBooking(null);
+            setSelectedSlotForBooking(null);
           }}
         />
       )}

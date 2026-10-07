@@ -18,6 +18,7 @@ import {
   Check
 } from 'lucide-react';
 import { formatDoctorName, formatCurrency } from '../utils/formatters';
+import { DEFAULT_REAL_CHAMBERS } from '../data/chambersData';
 
 // Helper to convert timeSlot string (e.g. "10:00 AM - 12:30 PM" or "07:00 PM - 08:30 PM") into ISO time "HH:mm:00"
 function extractStartTime(timeSlotStr) {
@@ -45,6 +46,7 @@ export default function SlotBookingModal({ doctor, initialChamber = null, initia
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [chamberSlots, setChamberSlots] = useState([]);
+  // NEVER randomly pre-select: if patient didn't click a specific chamber, let them choose!
   const [selectedChamber, setSelectedChamber] = useState(null);
   const [loadingChambers, setLoadingChambers] = useState(true);
 
@@ -53,56 +55,129 @@ export default function SlotBookingModal({ doctor, initialChamber = null, initia
   const docPhoto = doctor?.photoUrl || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400';
   const docDegree = doctor?.degree || 'MBBS, MD';
 
-  // Load visiting pharmacy chambers for this doctor
+  // Load all visiting pharmacy chambers for this doctor
   useEffect(() => {
-    if (doctor?.id) {
+    if (!doctor) return;
+    setLoadingChambers(true);
+
+    // 1. Gather all local matching chambers for this doctor
+    const localMatches = [];
+    DEFAULT_REAL_CHAMBERS.forEach(ch => {
+      const slots = ch.slots || ch.visitingDoctors || [];
+      const matchingSlot = slots.find(s => 
+        (doctor.id && s.doctorId === doctor.id) ||
+        (doctor.name && s.doctorName && s.doctorName.toLowerCase().includes(doctor.name.toLowerCase()))
+      );
+      if (matchingSlot) {
+        localMatches.push({
+          id: matchingSlot.id || matchingSlot.slotId || (ch.id * 1000 + localMatches.length + 1),
+          slotId: matchingSlot.slotId || matchingSlot.id,
+          pharmacyId: ch.id,
+          pharmacyName: ch.name,
+          shortName: ch.shortName || ch.name,
+          pharmacyAddress: ch.address,
+          locality: ch.locality || ch.city,
+          chamberRoom: matchingSlot.chamberRoom || 'Chamber 1',
+          availableDays: matchingSlot.availableDays || 'Mon to Sat',
+          timeSlot: matchingSlot.timeSlot || '10:00 AM - 12:30 PM',
+          consultationFee: matchingSlot.consultationFee || doctor.consultationFee || 500,
+          maxTokens: matchingSlot.maxTokens || 20
+        });
+      } else if (doctor.clinicAddress && (
+        doctor.clinicAddress.toLowerCase().includes((ch.shortName || ch.name).toLowerCase()) ||
+        (ch.shortName && doctor.clinicAddress.toLowerCase().includes(ch.shortName.toLowerCase()))
+      )) {
+        localMatches.push({
+          id: ch.id * 1000 + localMatches.length + 1,
+          slotId: ch.id * 1000 + localMatches.length + 1,
+          pharmacyId: ch.id,
+          pharmacyName: ch.name,
+          shortName: ch.shortName || ch.name,
+          pharmacyAddress: ch.address,
+          locality: ch.locality || ch.city,
+          chamberRoom: 'Chamber 1',
+          availableDays: 'Mon to Sat',
+          timeSlot: '10:00 AM - 12:30 PM',
+          consultationFee: doctor.consultationFee || 500,
+          maxTokens: 20
+        });
+      }
+    });
+
+    // 2. Query API and merge
+    if (doctor.id) {
       api.get(`/pharmacies/doctor/${doctor.id}`)
         .then(res => {
-          if (Array.isArray(res.data) && res.data.length > 0) {
-            setChamberSlots(res.data);
-            if (initialChamber) {
-              const matched = res.data.find(c => c.pharmacyId === initialChamber.id || c.pharmacyName === initialChamber.name);
-              setSelectedChamber(matched || res.data[0]);
-            } else {
-              setSelectedChamber(res.data[0]);
+          const merged = [...(Array.isArray(res.data) ? res.data : [])];
+          localMatches.forEach(lm => {
+            const alreadyInList = merged.some(m => 
+              (m.pharmacyId && m.pharmacyId === lm.pharmacyId) || 
+              (m.pharmacyName && m.pharmacyName.toLowerCase() === lm.pharmacyName.toLowerCase())
+            );
+            if (!alreadyInList) {
+              merged.push(lm);
             }
-          } else if (initialChamber && initialSlot) {
-            const fallbackChamber = {
-              id: initialSlot.id || 1,
+          });
+          if (merged.length === 0 && initialChamber) {
+            merged.push({
+              id: initialSlot?.id || 1,
               pharmacyId: initialChamber.id,
               pharmacyName: initialChamber.name,
               pharmacyAddress: initialChamber.address,
               locality: initialChamber.locality || initialChamber.city,
-              chamberRoom: initialSlot.chamberRoom || 'Chamber 1',
-              availableDays: initialSlot.availableDays || 'Mon to Sat',
-              timeSlot: initialSlot.timeSlot || '10:00 AM - 12:30 PM',
-              consultationFee: initialSlot.consultationFee || doctor?.consultationFee || 500,
-              maxTokens: initialSlot.maxTokens || 25
-            };
-            setChamberSlots([fallbackChamber]);
-            setSelectedChamber(fallbackChamber);
+              chamberRoom: initialSlot?.chamberRoom || 'Chamber 1',
+              availableDays: initialSlot?.availableDays || 'Mon to Sat',
+              timeSlot: initialSlot?.timeSlot || '10:00 AM - 12:30 PM',
+              consultationFee: initialSlot?.consultationFee || doctor.consultationFee || 500,
+              maxTokens: initialSlot?.maxTokens || 25
+            });
+          }
+          setChamberSlots(merged);
+
+          // If patient clicked a specific chamber card, initialize with it; otherwise DO NOT pick for them!
+          if (initialChamber) {
+            const matched = merged.find(c => 
+              (c.pharmacyId && c.pharmacyId === initialChamber.id) || 
+              (c.pharmacyName && (c.pharmacyName === initialChamber.name || c.pharmacyName === initialChamber.shortName))
+            );
+            setSelectedChamber(matched || initialChamber);
+          } else {
+            setSelectedChamber(null); // Patient chooses!
           }
         })
         .catch(err => {
-          console.warn('Could not load doctor visiting chambers:', err);
-          if (initialChamber && initialSlot) {
-            const fallbackChamber = {
-              id: initialSlot.id || 1,
+          console.warn('API chamber load notice, using local verified chambers:', err);
+          const list = [...localMatches];
+          if (list.length === 0 && initialChamber) {
+            list.push({
+              id: initialSlot?.id || 1,
               pharmacyId: initialChamber.id,
               pharmacyName: initialChamber.name,
               pharmacyAddress: initialChamber.address,
               locality: initialChamber.locality || initialChamber.city,
-              chamberRoom: initialSlot.chamberRoom || 'Chamber 1',
-              availableDays: initialSlot.availableDays || 'Mon to Sat',
-              timeSlot: initialSlot.timeSlot || '10:00 AM - 12:30 PM',
-              consultationFee: initialSlot.consultationFee || doctor?.consultationFee || 500,
-              maxTokens: initialSlot.maxTokens || 25
-            };
-            setChamberSlots([fallbackChamber]);
-            setSelectedChamber(fallbackChamber);
+              chamberRoom: initialSlot?.chamberRoom || 'Chamber 1',
+              availableDays: initialSlot?.availableDays || 'Mon to Sat',
+              timeSlot: initialSlot?.timeSlot || '10:00 AM - 12:30 PM',
+              consultationFee: initialSlot?.consultationFee || doctor.consultationFee || 500,
+              maxTokens: initialSlot?.maxTokens || 25
+            });
+          }
+          setChamberSlots(list);
+          if (initialChamber) {
+            const matched = list.find(c => 
+              (c.pharmacyId && c.pharmacyId === initialChamber.id) || 
+              (c.pharmacyName && (c.pharmacyName === initialChamber.name || c.pharmacyName === initialChamber.shortName))
+            );
+            setSelectedChamber(matched || initialChamber);
+          } else {
+            setSelectedChamber(null); // Patient chooses!
           }
         })
         .finally(() => setLoadingChambers(false));
+    } else {
+      setChamberSlots(localMatches);
+      setSelectedChamber(initialChamber || null);
+      setLoadingChambers(false);
     }
   }, [doctor?.id, initialChamber, initialSlot]);
 
@@ -172,6 +247,12 @@ export default function SlotBookingModal({ doctor, initialChamber = null, initia
     }
 
     if (isSubmitting) return; // Prevent double-click multi-booking
+    if (!selectedChamber) {
+      setErrorMessage('Please select one of the doctor\'s visiting chambers and sitting schedules before reserving.');
+      setStep('SELECT');
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage('');
     setStep('HOLDING');
@@ -421,76 +502,111 @@ export default function SlotBookingModal({ doctor, initialChamber = null, initia
               <span>Single Slot Policy: Exactly 1 consultation slot will be reserved for you.</span>
             </div>
 
-            {/* Chamber Selection (Choose 1 Chamber & Sitting Slot) */}
-            {chamberSlots.length > 0 && (
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label className="form-label" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>1. Select Chamber Sitting (Only 1 Allowed)</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700 }}>
-                    {chamberSlots.length} {chamberSlots.length === 1 ? 'Chamber' : 'Chambers'} Available
-                  </span>
-                </label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
-                  {chamberSlots.map((ch) => {
-                    const isSelected = selectedChamber?.id === ch.id;
-                    return (
-                      <div
-                        key={ch.id || ch.slotId}
-                        onClick={() => setSelectedChamber(ch)}
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: 'var(--radius-md)',
-                          border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border-medium)',
-                          background: isSelected ? 'var(--primary-subtle)' : 'var(--bg-elevated)',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '10px'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{
-                            width: '20px',
-                            height: '20px',
-                            borderRadius: '50%',
-                            border: isSelected ? '6px solid var(--primary)' : '2px solid var(--border-medium)',
-                            background: isSelected ? '#FFFFFF' : 'transparent',
-                            flexShrink: 0
-                          }} />
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.875rem', color: isSelected ? 'var(--primary)' : 'var(--text-primary)' }}>
-                              {ch.pharmacyName}
-                            </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1px' }}>
-                              📍 {ch.pharmacyAddress || ch.locality}
-                            </div>
-                            <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                              Days: <strong>{ch.availableDays}</strong> &bull; {ch.chamberRoom || 'Chamber 1'}
-                            </div>
-                          </div>
-                        </div>
+            {/* Chamber Selection (Patient explicitly chooses 1 Chamber & Sitting Slot) */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label className="form-label" style={{ marginBottom: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 800, fontSize: '0.95rem' }}>1. Choose Visiting Chamber & Sitting Schedule (Required)</span>
+                <span style={{ fontSize: '0.75rem', color: selectedChamber ? '#16A34A' : 'var(--primary)', fontWeight: 700 }}>
+                  {selectedChamber ? '✓ Location Selected' : `${chamberSlots.length} Available Locations`}
+                </span>
+              </label>
 
-                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--primary)' }}>
-                            ₹{ch.consultationFee}
+              {!selectedChamber && (
+                <div style={{
+                  padding: '8px 12px',
+                  background: 'rgba(2, 132, 199, 0.08)',
+                  border: '1px solid rgba(2, 132, 199, 0.25)',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.78rem',
+                  color: 'var(--primary)',
+                  fontWeight: 600,
+                  marginBottom: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span>👉 Please click on one of the visiting chambers below to choose your consultation location and sitting time:</span>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', maxHeight: '220px', overflowY: 'auto', paddingRight: '2px' }}>
+                {chamberSlots.map((ch) => {
+                  const isSelected = selectedChamber && (
+                    selectedChamber.id === ch.id || 
+                    (selectedChamber.pharmacyId && selectedChamber.pharmacyId === ch.pharmacyId && selectedChamber.timeSlot === ch.timeSlot) ||
+                    (selectedChamber.pharmacyName === ch.pharmacyName && selectedChamber.timeSlot === ch.timeSlot)
+                  );
+                  return (
+                    <div
+                      key={ch.id || ch.slotId || `${ch.pharmacyId}-${ch.timeSlot}`}
+                      onClick={() => setSelectedChamber(ch)}
+                      style={{
+                        padding: '11px 13px',
+                        borderRadius: 'var(--radius-md)',
+                        border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border-medium)',
+                        background: isSelected ? 'rgba(2, 132, 199, 0.09)' : 'var(--bg-elevated)',
+                        boxShadow: isSelected ? '0 0 0 1px var(--primary)' : 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px'
+                      }}
+                      id={`chamber-option-${ch.id || ch.slotId || ch.pharmacyId}`}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                        <div style={{
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          border: isSelected ? '6px solid var(--primary)' : '2px solid var(--border-medium)',
+                          background: isSelected ? '#FFFFFF' : 'transparent',
+                          flexShrink: 0,
+                          marginTop: '3px'
+                        }} />
+                        <div>
+                          <div style={{ fontWeight: 800, fontSize: '0.9rem', color: isSelected ? 'var(--primary)' : 'var(--text-primary)' }}>
+                            🏥 {ch.pharmacyName}
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--secondary)', fontWeight: 700 }}>
-                            ⏰ {ch.timeSlot}
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            📍 {ch.pharmacyAddress || ch.locality}
+                          </div>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>Days: <strong style={{ color: 'var(--text-primary)' }}>{ch.availableDays}</strong></span>
+                            <span>&bull;</span>
+                            <span>{ch.chamberRoom || 'Chamber 1'}</span>
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--primary)' }}>
+                          ₹{ch.consultationFee}
+                        </div>
+                        <div style={{
+                          fontSize: '0.75rem',
+                          color: isSelected ? 'var(--primary)' : 'var(--secondary)',
+                          fontWeight: 800,
+                          background: isSelected ? 'rgba(2, 132, 199, 0.14)' : 'var(--primary-subtle)',
+                          padding: '3px 8px',
+                          borderRadius: '4px',
+                          marginTop: '4px',
+                          display: 'inline-block'
+                        }}>
+                          ⏰ {ch.timeSlot}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            )}
+            </div>
 
             {/* Select 1 Consultation Date */}
             <div style={{ marginBottom: '1.25rem' }}>
-              <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>
-                {chamberSlots.length > 0 ? '2.' : '1.'} Select Consultation Date (1 Day)
+              <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block', fontWeight: 700, fontSize: '0.875rem' }}>
+                2. Select Consultation Date (1 Day)
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
                 {days.map((day) => (
@@ -519,51 +635,75 @@ export default function SlotBookingModal({ doctor, initialChamber = null, initia
 
             {/* Active Single Slot Summary Box */}
             <div style={{
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border-medium)',
+              background: selectedChamber ? 'var(--bg-elevated)' : 'rgba(239, 68, 68, 0.04)',
+              border: selectedChamber ? '1px solid var(--border-medium)' : '1px dashed #F87171',
               borderRadius: 'var(--radius-md)',
-              padding: '14px',
-              marginBottom: '1.5rem'
+              padding: '13px 15px',
+              marginBottom: '1.25rem'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                  Selected Consultation Slot (1 Slot):
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', color: selectedChamber ? 'var(--text-muted)' : '#DC2626' }}>
+                  {selectedChamber ? 'Selected Consultation Slot (1 Slot):' : 'Location Not Selected:'}
                 </span>
-                <span className="badge badge-confirmed" style={{ fontSize: '0.72rem' }}>
-                  1 Token
-                </span>
+                {selectedChamber && (
+                  <span className="badge badge-confirmed" style={{ fontSize: '0.72rem' }}>
+                    1 Token
+                  </span>
+                )}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.825rem' }}>
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Chamber: </span>
-                  <strong>{currentChamberName} ({currentRoom})</strong>
+              {selectedChamber ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.825rem' }}>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)' }}>Chamber: </span>
+                    <strong>{currentChamberName} ({currentRoom})</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)' }}>Sitting Time: </span>
+                    <strong style={{ color: 'var(--primary)' }}>⏰ {currentTimeSlot}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)' }}>Date: </span>
+                    <strong>{days[selectedDate].dayName}, {days[selectedDate].dateFormatted}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)' }}>Consultation Fee: </span>
+                    <strong style={{ color: 'var(--primary)', fontSize: '0.95rem' }}>₹{currentFee}</strong>
+                  </div>
                 </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Sitting Time: </span>
-                  <strong style={{ color: 'var(--primary)' }}>⏰ {currentTimeSlot}</strong>
+              ) : (
+                <div style={{ fontSize: '0.825rem', color: '#DC2626', fontWeight: 600 }}>
+                  ⚠️ No visiting chamber selected yet. Please click on one of the visiting chambers above to choose your preferred clinic & schedule.
                 </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Date: </span>
-                  <strong>{days[selectedDate].dayName}, {days[selectedDate].dateFormatted}</strong>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Total Fee: </span>
-                  <strong style={{ color: 'var(--primary)', fontSize: '0.95rem' }}>₹{currentFee}</strong>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Confirm & Reserve 1 Slot Button */}
             <button
               onClick={handleHoldSlot}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !selectedChamber}
               className="btn btn-primary"
-              style={{ width: '100%', padding: '12px', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              style={{
+                width: '100%',
+                padding: '13px',
+                fontSize: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                opacity: !selectedChamber ? 0.6 : 1,
+                cursor: !selectedChamber ? 'not-allowed' : 'pointer'
+              }}
               id="btn-confirm-hold-slot"
             >
               <Lock size={18} />
-              <span>{isSubmitting ? 'Reserving Your Slot...' : `Reserve 1 Slot & Pay ${formatCurrency(currentFee)}`}</span>
+              <span>
+                {isSubmitting
+                  ? 'Reserving Single Slot...'
+                  : !selectedChamber
+                    ? 'Please Choose a Visiting Chamber Above'
+                    : `Reserve 1 Slot at ${selectedChamber.shortName || selectedChamber.pharmacyName} (${formatCurrency(currentFee)})`}
+              </span>
             </button>
           </div>
         )}

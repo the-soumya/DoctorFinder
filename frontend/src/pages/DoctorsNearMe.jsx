@@ -93,6 +93,8 @@ export default function DoctorsNearMe() {
   // Navigation & Direction State
   const [activeRouteDoctor, setActiveRouteDoctor] = useState(null);
   const [selectedDoctorForBooking, setSelectedDoctorForBooking] = useState(null);
+  const [selectedChamberForBooking, setSelectedChamberForBooking] = useState(null);
+  const [selectedSlotForBooking, setSelectedSlotForBooking] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const mapRef = useRef(null);
@@ -485,7 +487,7 @@ export default function DoctorsNearMe() {
 
   }, [homeLocation, displayedDoctors, activeRouteDoctor, roadRouteInfo]);
 
-  const handleBookDoctor = (doc) => {
+  const handleBookDoctor = (doc, chamber = null, slot = null) => {
     if (!user) {
       navigate('/login', {
         state: {
@@ -496,6 +498,8 @@ export default function DoctorsNearMe() {
       return;
     }
     setSelectedDoctorForBooking(doc);
+    setSelectedChamberForBooking(chamber);
+    setSelectedSlotForBooking(slot);
   };
 
   // Available districts (Hooghly, Howrah)
@@ -1111,8 +1115,31 @@ export default function DoctorsNearMe() {
                           const slots = ch.slots || ch.visitingDoctors || [];
                           const mySlot = slots.find(s => s.doctorId === doc.id);
                           return (
-                            <div key={ch.id || ch.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                              <span>🏥 {ch.shortName || ch.name}</span>
+                            <div
+                              key={ch.id || ch.name}
+                              onClick={() => handleBookDoctor(doc, ch, mySlot)}
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                color: 'var(--text-primary)',
+                                padding: '4px 6px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(2, 132, 199, 0.12)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                              title={`Choose slot at ${ch.shortName || ch.name}`}
+                            >
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>🏥 {ch.shortName || ch.name}</span>
+                                <span style={{ fontSize: '0.65rem', color: 'var(--primary)', fontWeight: 700, background: 'var(--primary-subtle)', padding: '1px 5px', borderRadius: '3px' }}>
+                                  Choose
+                                </span>
+                              </span>
                               {mySlot?.timeSlot && (
                                 <span style={{ color: 'var(--primary)', fontWeight: 700 }}>
                                   ⏰ {mySlot.timeSlot}
@@ -1193,7 +1220,13 @@ export default function DoctorsNearMe() {
       {selectedDoctorForBooking && (
         <SlotBookingModal
           doctor={selectedDoctorForBooking}
-          onClose={() => setSelectedDoctorForBooking(null)}
+          initialChamber={selectedChamberForBooking}
+          initialSlot={selectedSlotForBooking}
+          onClose={() => {
+            setSelectedDoctorForBooking(null);
+            setSelectedChamberForBooking(null);
+            setSelectedSlotForBooking(null);
+          }}
           onBookingSuccess={() => {
             fetchDoctors();
           }}

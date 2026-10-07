@@ -355,6 +355,21 @@ export const DEFAULT_REAL_CHAMBERS = [
         chamberRoom: "Chamber 3",
         consultationFee: 800.0,
         maxTokens: 15
+      },
+      {
+        id: 704,
+        slotId: 704,
+        doctorId: 4,
+        doctorName: "Sayan Chakraborty",
+        degree: "MBBS, MS (Orthopedics), MCh",
+        specialization: "Consultant Spine & Joint Surgeon",
+        departmentName: "Orthopedics",
+        photoUrl: "https://images.unsplash.com/photo-1614608682850-e0d6ed316d47?auto=format&fit=crop&q=80&w=400",
+        availableDays: "Sunday",
+        timeSlot: "09:30 AM - 12:00 PM",
+        chamberRoom: "Chamber 1",
+        consultationFee: 650.0,
+        maxTokens: 20
       }
     ]
   },
