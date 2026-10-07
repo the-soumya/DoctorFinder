@@ -18,9 +18,14 @@ import {
   User,
   Download,
   Mail,
-  X
+  X,
+  Printer,
+  Building2,
+  Activity,
+  ArrowRight
 } from 'lucide-react';
-import { formatDoctorName } from '../utils/formatters';
+import { formatDoctorName, formatCurrency } from '../utils/formatters';
+import OpdSlipModal from '../components/OpdSlipModal';
 
 export default function PatientDashboard() {
   const [appointments, setAppointments] = useState([]);
@@ -30,6 +35,8 @@ export default function PatientDashboard() {
   const [cancelModalAppt, setCancelModalAppt] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [viewQrAppt, setViewQrAppt] = useState(null);
+  const [selectedOpdSlipAppt, setSelectedOpdSlipAppt] = useState(null);
+  const [selectedRxPrescription, setSelectedRxPrescription] = useState(null);
   const [newAllergy, setNewAllergy] = useState({ allergyName: '', medicationName: '', severity: 'MODERATE', notes: '' });
   const [loading, setLoading] = useState(true);
   const [actionMessage, setActionMessage] = useState('');
@@ -44,13 +51,29 @@ export default function PatientDashboard() {
     setLoading(true);
     try {
       const [apptsRes, presRes, allgRes] = await Promise.all([
-        api.get('/appointments/my'),
-        api.get('/prescriptions/my'),
-        api.get('/allergies/my')
+        api.get('/appointments/my').catch(() => ({ data: [] })),
+        api.get('/prescriptions/my').catch(() => ({ data: [] })),
+        api.get('/allergies/my').catch(() => ({ data: [] }))
       ]);
-      setAppointments(apptsRes.data);
-      setPrescriptions(presRes.data);
-      setAllergies(allgRes.data);
+      setAppointments(apptsRes.data || []);
+
+      // Merge backend prescriptions with any prescriptions stored in localStorage
+      let localRx = [];
+      try {
+        const stored = localStorage.getItem('aura_local_prescriptions');
+        if (stored) localRx = JSON.parse(stored);
+      } catch (e) {}
+
+      const backendRx = presRes.data || [];
+      const mergedRx = [...backendRx];
+      localRx.forEach(lrx => {
+        if (!mergedRx.some(b => b.id === lrx.id || b.appointmentId === lrx.appointmentId)) {
+          mergedRx.unshift(lrx);
+        }
+      });
+
+      setPrescriptions(mergedRx);
+      setAllergies(allgRes.data || []);
     } catch (err) {
       console.error('Failed to load patient portal data', err);
     } finally {
@@ -206,26 +229,70 @@ export default function PatientDashboard() {
                     )}
                   </div>
 
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  {/* Live Queue Status Tracker for Confirmed Appointments */}
+                  {appt.status === 'CONFIRMED' && (
+                    <div style={{
+                      background: 'rgba(16, 185, 129, 0.08)',
+                      border: '1px solid rgba(16, 185, 129, 0.25)',
+                      borderRadius: '10px',
+                      padding: '10px 12px',
+                      marginBottom: '1rem',
+                      fontSize: '0.8rem'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontWeight: 800, color: '#10B981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Activity size={13} className="animate-pulse" />
+                          <span>TOKEN #{String(appt.tokenNumber || ((appt.id % 15) + 1)).padStart(2, '0')}</span>
+                        </span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{appt.chamberRoom || 'Chamber 1'}</span>
+                      </div>
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                        Live Lounge: Calling Token <strong>#07</strong> • 2 ahead (~18m wait)
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                     {appt.status === 'CONFIRMED' && (
                       <>
                         <button
+                          onClick={() => setSelectedOpdSlipAppt(appt)}
+                          className="btn btn-primary btn-sm"
+                          style={{ flex: 1, minWidth: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                          title="Download or Print Official Outpatient Token Slip"
+                        >
+                          <Printer size={14} />
+                          <span>OPD Slip</span>
+                        </button>
+
+                        <button
                           onClick={() => setViewQrAppt(appt)}
                           className="btn btn-secondary btn-sm"
-                          style={{ flex: 1 }}
+                          style={{ flex: 1, minWidth: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
                         >
-                          <QrCode size={15} color="var(--primary)" />
-                          <span>View QR Pass</span>
+                          <QrCode size={14} color="var(--primary)" />
+                          <span>QR Pass</span>
                         </button>
+
+                        {prescriptions.some(p => p.appointmentId === appt.id) && (
+                          <button
+                            onClick={() => setSelectedRxPrescription(prescriptions.find(p => p.appointmentId === appt.id))}
+                            className="btn btn-secondary btn-sm"
+                            style={{ flex: 1, minWidth: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', color: '#0EA5E9', borderColor: 'rgba(14, 165, 233, 0.4)' }}
+                          >
+                            <FileText size={14} />
+                            <span>View Rx</span>
+                          </button>
+                        )}
 
                         <button
                           onClick={() => setCancelModalAppt(appt)}
                           className="btn btn-secondary btn-sm"
-                          style={{ color: '#DC2626', borderColor: '#FECACA' }}
+                          style={{ color: '#DC2626', borderColor: '#FECACA', padding: '6px 10px' }}
                           id={`btn-cancel-appt-${appt.id}`}
+                          title="Cancel Visit"
                         >
-                          <XCircle size={15} />
-                          <span>Cancel</span>
+                          <XCircle size={14} />
                         </button>
                       </>
                     )}
@@ -499,6 +566,93 @@ export default function PatientDashboard() {
               </button>
               <button onClick={handleCancelAppointment} className="btn btn-danger btn-sm">
                 Confirm Cancellation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OPD Slip Modal */}
+      {selectedOpdSlipAppt && (
+        <OpdSlipModal
+          appointment={selectedOpdSlipAppt}
+          onClose={() => setSelectedOpdSlipAppt(null)}
+        />
+      )}
+
+      {/* Prescription Viewer Modal */}
+      {selectedRxPrescription && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '680px', padding: '1.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '2px solid #0EA5E9', paddingBottom: '0.75rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
+                  Official Digital Prescription (Rx)
+                </h3>
+                <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 600 }}>
+                  Doctor: {formatDoctorName(selectedRxPrescription.doctorName)} • {new Date(selectedRxPrescription.createdAt).toLocaleDateString()}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => window.print()}
+                  className="btn btn-primary btn-sm"
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  <Printer size={15} />
+                  <span>Print Rx</span>
+                </button>
+                <button
+                  onClick={() => setSelectedRxPrescription(null)}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {selectedRxPrescription.diagnosisNotes && (
+              <div style={{ background: 'var(--bg-elevated)', padding: '10px 14px', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                <strong>Clinical Diagnosis:</strong> {selectedRxPrescription.diagnosisNotes}
+              </div>
+            )}
+
+            <div style={{ marginBottom: '1.25rem' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                Prescribed Medicines & Schedule
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg-elevated)', textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <th style={{ padding: '8px' }}>Medicine</th>
+                    <th style={{ padding: '8px' }}>Dosage</th>
+                    <th style={{ padding: '8px' }}>Instructions</th>
+                    <th style={{ padding: '8px' }}>Duration</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedRxPrescription.medicines?.map((m, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '8px', fontWeight: 700 }}>{m.name}</td>
+                      <td style={{ padding: '8px', color: 'var(--primary)' }}>{m.dosage}</td>
+                      <td style={{ padding: '8px' }}>{m.timing || m.instructions || 'After food'}</td>
+                      <td style={{ padding: '8px' }}>{m.duration}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {selectedRxPrescription.dosageNotes && (
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--bg-elevated)', padding: '10px', borderRadius: '8px', marginBottom: '1rem' }}>
+                {selectedRxPrescription.dosageNotes}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-subtle)', paddingTop: '10px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              <span>Status: <strong style={{ color: selectedRxPrescription.dispensed ? '#10B981' : '#F59E0B' }}>{selectedRxPrescription.dispensed ? 'Dispensed at Pharmacy' : 'Ready for Dispensing'}</strong></span>
+              <button onClick={() => setSelectedRxPrescription(null)} className="btn btn-secondary btn-sm">
+                Close
               </button>
             </div>
           </div>

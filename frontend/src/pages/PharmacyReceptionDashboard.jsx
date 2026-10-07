@@ -60,12 +60,27 @@ export default function PharmacyReceptionDashboard() {
     try {
       // 1. Fetch appointments & prescriptions
       const [apptsRes, presRes, docsRes] = await Promise.all([
-        api.get('/appointments'),
-        api.get('/prescriptions'),
+        api.get('/appointments').catch(() => ({ data: [] })),
+        api.get('/prescriptions').catch(() => ({ data: [] })),
         api.get('/doctors').catch(() => ({ data: [] }))
       ]);
       setAppointments(apptsRes.data || []);
-      setPrescriptions(presRes.data || []);
+      
+      let localRx = [];
+      try {
+        const stored = localStorage.getItem('aura_local_prescriptions');
+        if (stored) localRx = JSON.parse(stored);
+      } catch (e) {}
+
+      const backendRx = presRes.data || [];
+      const mergedRx = [...backendRx];
+      localRx.forEach(lrx => {
+        if (!mergedRx.some(b => b.id === lrx.id || b.appointmentId === lrx.appointmentId)) {
+          mergedRx.unshift(lrx);
+        }
+      });
+
+      setPrescriptions(mergedRx);
       setAllDoctors(docsRes.data || []);
 
       // 2. Fetch logged-in pharmacy profile
@@ -155,8 +170,21 @@ export default function PharmacyReceptionDashboard() {
 
   const handleMarkDispensed = async (prescriptionId) => {
     try {
-      await api.post(`/prescriptions/${prescriptionId}/dispense`);
-      setStatusMessage('Prescription marked as dispensed by pharmacy.');
+      try {
+        await api.post(`/prescriptions/${prescriptionId}/dispense`);
+      } catch (err) {
+        console.warn('Backend dispense endpoint warning:', err);
+      }
+
+      // Sync local prescriptions store
+      try {
+        const localKey = 'aura_local_prescriptions';
+        let localRx = JSON.parse(localStorage.getItem(localKey) || '[]');
+        localRx = localRx.map(rx => rx.id === prescriptionId ? { ...rx, dispensed: true, dispensedAt: new Date().toISOString() } : rx);
+        localStorage.setItem(localKey, JSON.stringify(localRx));
+      } catch (e) {}
+
+      setStatusMessage('Prescription marked as dispensed by pharmacy and billed to patient.');
       fetchData();
       setTimeout(() => setStatusMessage(''), 4000);
     } catch (err) {

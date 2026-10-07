@@ -23,7 +23,8 @@ import {
   AlertTriangle,
   Stethoscope,
   Pill,
-  Timer
+  Timer,
+  Tv
 } from 'lucide-react';
 import { formatDoctorName, formatCurrency } from '../utils/formatters';
 
@@ -331,6 +332,22 @@ export default function PharmacyAttendance() {
           <Link to="/pharmacy/chambers" className="btn btn-secondary" id="btn-nav-chambers">
             <Building2 size={16} />
             <span>Chamber Schedules</span>
+          </Link>
+
+          <Link
+            to="/chamber/live-display"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+            id="btn-nav-live-tv-display"
+            style={{
+              borderColor: 'rgba(16, 185, 129, 0.4)',
+              color: '#10B981',
+              background: 'rgba(16, 185, 129, 0.08)'
+            }}
+          >
+            <Tv size={16} color="#10B981" />
+            <span>Launch Waiting Lounge TV</span>
           </Link>
 
           <button

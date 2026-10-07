@@ -21,7 +21,8 @@ import {
   Search,
   ArrowRight,
   Pill,
-  UserCheck
+  UserCheck,
+  Tv
 } from 'lucide-react';
 import { formatDoctorName } from '../utils/formatters';
 
@@ -131,6 +132,11 @@ export default function PharmacyChambers() {
           <Link to="/pharmacy/doctors" className="btn btn-secondary" id="btn-to-doctors-dir">
             <Users size={16} />
             <span>Doctors & Contacts</span>
+          </Link>
+
+          <Link to="/chamber/live-display" className="btn btn-secondary" target="_blank" id="btn-to-live-tv" style={{ borderColor: 'rgba(16, 185, 129, 0.4)', color: '#10B981' }}>
+            <Tv size={16} color="#10B981" />
+            <span>Launch Live TV Screen</span>
           </Link>
 
           <button

@@ -18,13 +18,16 @@ import {
   UserCheck,
   Building2,
   Users,
-  ShieldCheck
+  ShieldCheck,
+  Tv
 } from 'lucide-react';
 import { formatDoctorName } from '../utils/formatters';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { language, toggleLanguage, t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -127,7 +130,29 @@ export default function Navbar() {
                 }}
               >
                 <Bot size={16} />
-                <span>Check Symptoms</span>
+                <span>{t('checkSymptoms') || 'Check Symptoms'}</span>
+              </Link>
+
+              <Link
+                to="/chamber/live-display"
+                id="nav-link-live-display"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  textDecoration: 'none',
+                  fontSize: '0.885rem',
+                  fontWeight: 600,
+                  color: isActive('/chamber/live-display') ? '#10B981' : 'var(--text-secondary)',
+                  background: isActive('/chamber/live-display') ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                  transition: 'all 0.15s ease'
+                }}
+                title="Fullscreen Chamber Waiting Room TV Display with Voice Calling"
+              >
+                <Tv size={16} color="#10B981" />
+                <span>{t('liveWaitingScreen') || 'Live TV Display'}</span>
               </Link>
             </>
           )}
@@ -398,6 +423,17 @@ export default function Navbar() {
 
         {/* Right side: Theme Toggle & Auth controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Language Toggle Button (English / বাংলা) */}
+          <button
+            onClick={toggleLanguage}
+            className="btn btn-secondary btn-sm"
+            style={{ borderRadius: 'var(--radius-md)', padding: '5px 10px', fontWeight: 800, fontSize: '0.785rem' }}
+            title={language === 'en' ? 'বাংলা ভাষায় দেখুন (Switch to Bengali)' : 'Switch to English'}
+            id="language-toggle-btn"
+          >
+            {language === 'en' ? 'বাংলা' : 'EN'}
+          </button>
+
           {/* Medical Theme Toggle Button */}
           <button
             onClick={toggleTheme}

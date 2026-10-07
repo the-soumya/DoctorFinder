@@ -17,9 +17,11 @@ import PharmacyReceptionDashboard from './pages/PharmacyReceptionDashboard';
 import PharmacyChambers from './pages/PharmacyChambers';
 import PharmacyDoctorsDirectory from './pages/PharmacyDoctorsDirectory';
 import PharmacyAttendance from './pages/PharmacyAttendance';
+import ChamberLiveDisplay from './pages/ChamberLiveDisplay';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminAuditLogs from './pages/AdminAuditLogs';
 import DoctorPatients from './pages/DoctorPatients';
+import { LanguageProvider } from './context/LanguageContext';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user } = useAuth();
@@ -35,18 +37,20 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 export default function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <Router>
-          <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            <Navbar />
-            <main style={{ flex: 1 }}>
-              <Routes>
-                {/* Public Discovery Routes */}
-                <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/doctors" element={<DoctorsNearMe />} />
-                <Route path="/ai-screener" element={<SymptomChecker />} />
+      <LanguageProvider>
+        <AuthProvider>
+          <Router>
+            <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+              <Navbar />
+              <main style={{ flex: 1 }}>
+                <Routes>
+                  {/* Public Discovery Routes */}
+                  <Route path="/" element={<Home />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/doctors" element={<DoctorsNearMe />} />
+                  <Route path="/ai-screener" element={<SymptomChecker />} />
+                  <Route path="/chamber/live-display" element={<ChamberLiveDisplay />} />
 
                 {/* Patient & Staff Medical Lab Reports */}
                 <Route
@@ -175,6 +179,7 @@ export default function App() {
           </div>
         </Router>
       </AuthProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }
