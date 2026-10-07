@@ -1,8 +1,6 @@
 package com.healthportal.controller;
 
-import com.healthportal.entity.AuditLog;
-import com.healthportal.entity.Role;
-import com.healthportal.entity.User;
+import com.healthportal.entity.*;
 import com.healthportal.exception.ResourceNotFoundException;
 import com.healthportal.repository.UserRepository;
 import com.healthportal.service.AdminAnalyticsService;

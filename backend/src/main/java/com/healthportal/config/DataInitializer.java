@@ -1425,6 +1425,7 @@ public class DataInitializer implements CommandLineRunner {
                     clinicAddress
             );
             doctorRepository.save(doc);
+        }
     }
 
     private void seedPharmaciesAndChambers() {
