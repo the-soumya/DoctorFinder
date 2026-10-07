@@ -307,6 +307,46 @@ export default function Navbar() {
                 <Building2 size={16} />
                 <span>Doctor Chambers</span>
               </Link>
+
+              <Link
+                to="/pharmacy/attendance"
+                id="nav-link-pharmacy-attendance"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  textDecoration: 'none',
+                  fontSize: '0.885rem',
+                  fontWeight: 600,
+                  color: isActive('/pharmacy/attendance') ? 'var(--primary)' : 'var(--text-secondary)',
+                  background: isActive('/pharmacy/attendance') ? 'var(--primary-subtle)' : 'transparent'
+                }}
+              >
+                <UserCheck size={16} />
+                <span>Attendance (In/Out)</span>
+              </Link>
+
+              <Link
+                to="/pharmacy/doctors"
+                id="nav-link-pharmacy-doctors"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  textDecoration: 'none',
+                  fontSize: '0.885rem',
+                  fontWeight: 600,
+                  color: isActive('/pharmacy/doctors') ? 'var(--primary)' : 'var(--text-secondary)',
+                  background: isActive('/pharmacy/doctors') ? 'var(--primary-subtle)' : 'transparent'
+                }}
+              >
+                <Users size={16} />
+                <span>Doctors & Contacts</span>
+              </Link>
             </>
           )}
 

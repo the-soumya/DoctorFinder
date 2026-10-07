@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { DEFAULT_REAL_DOCTORS } from '../data/chambersData';
 import {
   Building2,
   Calendar,
@@ -10,7 +11,6 @@ import {
   Trash2,
   Stethoscope,
   Ticket,
-  Printer,
   X,
   CheckCircle,
   AlertTriangle,
@@ -20,7 +20,8 @@ import {
   Users,
   Search,
   ArrowRight,
-  Pill
+  Pill,
+  UserCheck
 } from 'lucide-react';
 import { formatDoctorName } from '../utils/formatters';
 
@@ -39,12 +40,6 @@ export default function PharmacyChambers() {
   const [consultationFee, setConsultationFee] = useState('600');
   const [maxTokens, setMaxTokens] = useState('20');
   const [submittingSlot, setSubmittingSlot] = useState(false);
-
-  // Walk-in Token Generation State
-  const [selectedChamberForToken, setSelectedChamberForToken] = useState(null);
-  const [tokenPatientName, setTokenPatientName] = useState('');
-  const [tokenPatientPhone, setTokenPatientPhone] = useState('');
-  const [generatedToken, setGeneratedToken] = useState(null);
 
   const { user } = useAuth();
 
@@ -108,28 +103,6 @@ export default function PharmacyChambers() {
     }
   };
 
-  const handleGenerateToken = (e) => {
-    e.preventDefault();
-    if (!tokenPatientName.trim() || !selectedChamberForToken) return;
-
-    const tokenNum = `TK-${Math.floor(100 + Math.random() * 900)}`;
-    setGeneratedToken({
-      tokenNumber: tokenNum,
-      patientName: tokenPatientName,
-      patientPhone: tokenPatientPhone || 'N/A',
-      doctorName: selectedChamberForToken.doctorName,
-      specialization: selectedChamberForToken.specialization,
-      chamberRoom: selectedChamberForToken.chamberRoom,
-      timeSlot: selectedChamberForToken.timeSlot,
-      date: new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }),
-      timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-    });
-  };
-
-  const handlePrintSlip = () => {
-    window.print();
-  };
-
   const visitingDoctors = pharmacy?.visitingDoctors || [];
 
   return (
@@ -145,19 +118,24 @@ export default function PharmacyChambers() {
           </div>
           <h1 style={{ fontSize: '2.2rem', fontWeight: 800 }}>Visiting Doctor Chambers & Schedule</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-            Configure chamber room allocations, visiting specialist timetables, consultation fees, and issue walk-in tokens.
+            Configure chamber room allocations, visiting specialist timetables, consultation fees, and monitor active consulting rooms.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <Link to="/pharmacy/dashboard" className="btn btn-secondary" id="btn-back-to-pharmacy">
-            <Pill size={16} />
-            <span>Pharmacy & Dispensing</span>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <Link to="/pharmacy/attendance" className="btn btn-primary" id="btn-to-attendance">
+            <UserCheck size={16} />
+            <span>Chamber In/Out Attendance</span>
+          </Link>
+
+          <Link to="/pharmacy/doctors" className="btn btn-secondary" id="btn-to-doctors-dir">
+            <Users size={16} />
+            <span>Doctors & Contacts</span>
           </Link>
 
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="btn btn-primary"
+            className="btn btn-secondary"
             id="btn-add-chamber-slot"
           >
             <Plus size={16} />
@@ -364,28 +342,41 @@ export default function PharmacyChambers() {
                       <span>₹{slot.consultationFee || 500}</span>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                      <Ticket size={14} />
-                      <span>Max {slot.maxTokens || 20} Tokens</span>
-                    </div>
+                    {(() => {
+                      const dObj = DEFAULT_REAL_DOCTORS.find(d => d.id === slot.doctorId || d.name === slot.doctorName);
+                      const phone = dObj?.phone || '+91 98311 55667';
+                      return (
+                        <a href={`tel:${phone}`} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none' }} title="Call visiting doctor directly">
+                          <Phone size={12} />
+                          <span>{phone}</span>
+                        </a>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
 
-              {/* Action */}
-              <button
-                onClick={() => {
-                  setSelectedChamberForToken(slot);
-                  setTokenPatientName('');
-                  setTokenPatientPhone('');
-                  setGeneratedToken(null);
-                }}
-                className="btn btn-secondary btn-sm"
-                style={{ width: '100%', justifyContent: 'center' }}
-              >
-                <Ticket size={15} />
-                <span>Issue Walk-in Token</span>
-              </button>
+              {/* Actions: Track Attendance & Doctor Profile */}
+              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                <Link
+                  to="/pharmacy/attendance"
+                  className="btn btn-primary btn-sm"
+                  style={{ flex: 1, justifyContent: 'center' }}
+                  id={`btn-track-doc-${slot.slotId}`}
+                >
+                  <UserCheck size={14} />
+                  <span>Chamber Attendance</span>
+                </Link>
+
+                <Link
+                  to="/pharmacy/doctors"
+                  className="btn btn-secondary btn-sm"
+                  title="View Doctor Profile & Contacts"
+                >
+                  <Users size={14} />
+                  <span>Contacts</span>
+                </Link>
+              </div>
             </div>
           ))}
         </div>
@@ -537,173 +528,6 @@ export default function PharmacyChambers() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Walk-in Token Generator Modal */}
-      {selectedChamberForToken && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.65)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000,
-          padding: '1.5rem'
-        }}>
-          <div className="card" style={{ maxWidth: '500px', width: '100%', padding: '1.75rem', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Ticket size={20} color="#F59E0B" />
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>
-                  Issue Walk-in Queue Token
-                </h3>
-              </div>
-              <button onClick={() => setSelectedChamberForToken(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                <X size={20} />
-              </button>
-            </div>
-
-            {!generatedToken ? (
-              <form onSubmit={handleGenerateToken} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{
-                  padding: '10px 14px',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--bg-subtle)',
-                  fontSize: '0.85rem'
-                }}>
-                  <div><strong>Doctor:</strong> {formatDoctorName(selectedChamberForToken.doctorName)}</div>
-                  <div><strong>Chamber:</strong> {selectedChamberForToken.chamberRoom} ({selectedChamberForToken.timeSlot})</div>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
-                    Walk-in Patient Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={tokenPatientName}
-                    onChange={(e) => setTokenPatientName(e.target.value)}
-                    placeholder="e.g. Ramesh Kumar"
-                    className="input-field"
-                    required
-                    autoFocus
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
-                    Patient Contact Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={tokenPatientPhone}
-                    onChange={(e) => setTokenPatientPhone(e.target.value)}
-                    placeholder="e.g. +91 98765 43210"
-                    className="input-field"
-                  />
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedChamberForToken(null)}
-                    className="btn btn-secondary btn-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn btn-primary btn-sm">
-                    <Ticket size={15} />
-                    <span>Generate Token Slip</span>
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div>
-                {/* Physical Printable Token Slip Preview */}
-                <div style={{
-                  padding: '1.5rem',
-                  border: '2px dashed var(--border-subtle)',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--bg-card)',
-                  textAlign: 'center',
-                  marginBottom: '1.5rem'
-                }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                    AURAHEALTH OUTPATIENT DESK
-                  </div>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: '4px 0 12px' }}>
-                    {pharmacy?.name || 'Hospital Pharmacy & Reception'}
-                  </h4>
-
-                  <div style={{
-                    fontSize: '2.4rem',
-                    fontWeight: 900,
-                    letterSpacing: '0.04em',
-                    color: '#F59E0B',
-                    margin: '8px 0'
-                  }}>
-                    {generatedToken.tokenNumber}
-                  </div>
-
-                  <div style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '4px' }}>
-                    Patient: {generatedToken.patientName}
-                  </div>
-
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                    {formatDoctorName(generatedToken.doctorName)} • {generatedToken.specialization}
-                  </div>
-
-                  <div style={{
-                    display: 'inline-block',
-                    padding: '4px 12px',
-                    borderRadius: 'var(--radius-full)',
-                    background: 'var(--primary-subtle)',
-                    color: 'var(--primary)',
-                    fontWeight: 700,
-                    fontSize: '0.8rem',
-                    marginBottom: '10px'
-                  }}>
-                    {generatedToken.chamberRoom} • {generatedToken.timeSlot}
-                  </div>
-
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Date: {generatedToken.date} • Issued at {generatedToken.timestamp}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
-                  <button
-                    onClick={() => setGeneratedToken(null)}
-                    className="btn btn-secondary btn-sm"
-                  >
-                    Issue Another
-                  </button>
-
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      onClick={() => setSelectedChamberForToken(null)}
-                      className="btn btn-secondary btn-sm"
-                    >
-                      Done
-                    </button>
-                    <button
-                      onClick={handlePrintSlip}
-                      className="btn btn-primary btn-sm"
-                    >
-                      <Printer size={15} />
-                      <span>Print Slip</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}

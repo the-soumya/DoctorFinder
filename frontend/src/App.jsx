@@ -15,6 +15,8 @@ import DoctorDashboard from './pages/DoctorDashboard';
 import DoctorProfile from './pages/DoctorProfile';
 import PharmacyReceptionDashboard from './pages/PharmacyReceptionDashboard';
 import PharmacyChambers from './pages/PharmacyChambers';
+import PharmacyDoctorsDirectory from './pages/PharmacyDoctorsDirectory';
+import PharmacyAttendance from './pages/PharmacyAttendance';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminAuditLogs from './pages/AdminAuditLogs';
 import DoctorPatients from './pages/DoctorPatients';
@@ -122,6 +124,26 @@ export default function App() {
                   element={
                     <ProtectedRoute allowedRoles={['ROLE_PHARMACIST_RECEPTIONIST', 'ROLE_ADMIN']}>
                       <PharmacyChambers />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Pharmacy Doctors Directory with Locality & Contacts */}
+                <Route
+                  path="/pharmacy/doctors"
+                  element={
+                    <ProtectedRoute allowedRoles={['ROLE_PHARMACIST_RECEPTIONIST', 'ROLE_ADMIN']}>
+                      <PharmacyDoctorsDirectory />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Pharmacy Doctor & Patient Live Attendance (In / Out) */}
+                <Route
+                  path="/pharmacy/attendance"
+                  element={
+                    <ProtectedRoute allowedRoles={['ROLE_PHARMACIST_RECEPTIONIST', 'ROLE_ADMIN']}>
+                      <PharmacyAttendance />
                     </ProtectedRoute>
                   }
                 />
