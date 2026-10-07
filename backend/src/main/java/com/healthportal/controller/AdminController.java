@@ -36,6 +36,21 @@ public class AdminController {
     private com.healthportal.repository.PharmacyRepository pharmacyRepository;
 
     @Autowired
+    private com.healthportal.repository.DepartmentRepository departmentRepository;
+
+    @Autowired
+    private com.healthportal.repository.AppointmentRepository appointmentRepository;
+
+    @Autowired
+    private com.healthportal.repository.PharmacyDoctorSlotRepository slotRepository;
+
+    @Autowired
+    private com.healthportal.service.AppointmentService appointmentService;
+
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
+    @Autowired
     private AuditService auditService;
 
     @GetMapping("/stats")
@@ -155,5 +170,123 @@ public class AdminController {
         user = userRepository.save(user);
         auditService.log(null, "USER_ROLE_UPDATED", "users", user.getId(), "Updated role to " + role);
         return ResponseEntity.ok(user);
+    }
+
+    @GetMapping("/appointments")
+    @Operation(summary = "Get all appointments in the system for admin overview")
+    public ResponseEntity<List<com.healthportal.dto.appointment.AppointmentDto>> getAllAppointmentsAdmin() {
+        return ResponseEntity.ok(appointmentService.getAllAppointments());
+    }
+
+    @DeleteMapping("/appointments/{id}")
+    @Operation(summary = "Cancel and remove an appointment (Admin master override)")
+    public ResponseEntity<Map<String, Object>> deleteAppointmentAdmin(@PathVariable Long id) {
+        Appointment appt = appointmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + id));
+        appt.setStatus(com.healthportal.entity.AppointmentStatus.CANCELLED);
+        appt.setCancellationReason("Cancelled by Hospital Administrator");
+        appointmentRepository.save(appt);
+        auditService.log(null, "ADMIN_CANCELLED_APPOINTMENT", "appointments", id, "Admin cancelled appointment #" + id);
+        Map<String, Object> resp = new java.util.HashMap<>();
+        resp.put("success", true);
+        resp.put("message", "Appointment #" + id + " has been cancelled by Administrator.");
+        return ResponseEntity.ok(resp);
+    }
+
+    @PostMapping("/doctors")
+    @Operation(summary = "Add a new Doctor directly to the hospital system (Admin)")
+    public ResponseEntity<Map<String, Object>> addDoctorAdmin(@RequestBody Map<String, Object> req) {
+        String name = req.get("name").toString();
+        String email = req.get("email").toString();
+        String password = req.getOrDefault("password", "doctor123").toString();
+        String phone = req.getOrDefault("phone", "+91 98765 43210").toString();
+        String spec = req.getOrDefault("specialization", "General Physician").toString();
+        String degree = req.getOrDefault("degree", "MBBS, MD").toString();
+        String clinicAddress = req.getOrDefault("clinicAddress", "Central Outpatient Clinic").toString();
+        String city = req.getOrDefault("city", "Uttarpara").toString();
+        String locality = req.getOrDefault("locality", "Makhla").toString();
+        java.math.BigDecimal fee = new java.math.BigDecimal(req.getOrDefault("consultationFee", "500").toString());
+        Integer exp = Integer.valueOf(req.getOrDefault("experienceYears", "5").toString());
+        String photoUrl = req.getOrDefault("photoUrl", "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400").toString();
+
+        if (userRepository.existsByEmail(email)) {
+            throw new com.healthportal.exception.BadRequestException("Email is already registered: " + email);
+        }
+
+        User user = new User(name, email, passwordEncoder.encode(password), Role.ROLE_DOCTOR, phone);
+        user.setIsApproved(true);
+        user = userRepository.save(user);
+
+        Department dept = departmentRepository.findAll().stream().findFirst()
+                .orElseGet(() -> departmentRepository.save(new Department("General Medicine", "Primary healthcare")));
+        if (req.containsKey("departmentId")) {
+            Long deptId = Long.valueOf(req.get("departmentId").toString());
+            dept = departmentRepository.findById(deptId).orElse(dept);
+        }
+
+        Doctor doc = new Doctor(user, dept, spec, 22.6730, 88.3340, fee, 4.8, exp, "Consulting specialist", degree, photoUrl);
+        doc.setCity(city);
+        doc.setLocality(locality);
+        doc.setClinicAddress(clinicAddress);
+        doc = doctorRepository.save(doc);
+
+        auditService.log(null, "ADMIN_ADDED_DOCTOR", "doctors", doc.getId(), "Admin added Dr. " + name);
+        Map<String, Object> resp = new java.util.HashMap<>();
+        resp.put("success", true);
+        resp.put("doctorId", doc.getId());
+        resp.put("message", "Dr. " + name + " has been registered successfully.");
+        return ResponseEntity.ok(resp);
+    }
+
+    @DeleteMapping("/doctors/{id}")
+    @Operation(summary = "Remove a doctor from the hospital platform (Admin)")
+    public ResponseEntity<Map<String, Object>> deleteDoctorAdmin(@PathVariable Long id) {
+        Doctor doc = doctorRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with ID: " + id));
+        slotRepository.findAll().stream()
+                .filter(s -> s.getDoctor().getId().equals(id))
+                .forEach(slotRepository::delete);
+        doctorRepository.delete(doc);
+        auditService.log(null, "ADMIN_DELETED_DOCTOR", "doctors", id, "Admin removed doctor #" + id);
+        Map<String, Object> resp = new java.util.HashMap<>();
+        resp.put("success", true);
+        resp.put("message", "Doctor has been removed successfully.");
+        return ResponseEntity.ok(resp);
+    }
+
+    @PostMapping("/pharmacies")
+    @Operation(summary = "Add a new Pharmacy / Chamber location (Admin)")
+    public ResponseEntity<Map<String, Object>> addPharmacyAdmin(@RequestBody Map<String, Object> req) {
+        String name = req.get("name").toString();
+        String license = req.getOrDefault("licenseNumber", "WB-DL-" + (System.currentTimeMillis() % 100000)).toString();
+        String address = req.get("address").toString();
+        String city = req.getOrDefault("city", "Uttarpara").toString();
+        String locality = req.getOrDefault("locality", "Makhla").toString();
+        String phone = req.getOrDefault("phone", "+91 98311 00000").toString();
+        String operatingHours = req.getOrDefault("operatingHours", "08:00 AM - 10:00 PM").toString();
+
+        Pharmacy pharmacy = new Pharmacy(name, license, null, address, city, "Hooghly", "West Bengal", locality, 22.6730, 88.3340, phone, operatingHours, true);
+        pharmacy = pharmacyRepository.save(pharmacy);
+
+        auditService.log(null, "ADMIN_ADDED_PHARMACY", "pharmacies", pharmacy.getId(), "Admin created pharmacy: " + name);
+        Map<String, Object> resp = new java.util.HashMap<>();
+        resp.put("success", true);
+        resp.put("pharmacyId", pharmacy.getId());
+        resp.put("message", "Pharmacy chamber '" + name + "' added successfully.");
+        return ResponseEntity.ok(resp);
+    }
+
+    @DeleteMapping("/pharmacies/{id}")
+    @Operation(summary = "Remove a pharmacy / chamber location (Admin)")
+    public ResponseEntity<Map<String, Object>> deletePharmacyAdmin(@PathVariable Long id) {
+        Pharmacy p = pharmacyRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Pharmacy not found with ID: " + id));
+        slotRepository.findByPharmacyId(id).forEach(slotRepository::delete);
+        pharmacyRepository.delete(p);
+        auditService.log(null, "ADMIN_DELETED_PHARMACY", "pharmacies", id, "Admin deleted pharmacy: " + p.getName());
+        Map<String, Object> resp = new java.util.HashMap<>();
+        resp.put("success", true);
+        resp.put("message", "Pharmacy '" + p.getName() + "' has been removed.");
+        return ResponseEntity.ok(resp);
     }
 }

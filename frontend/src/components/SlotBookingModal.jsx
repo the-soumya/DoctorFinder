@@ -31,11 +31,32 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [qrPayload, setQrPayload] = useState('');
 
+  const [chamberSlots, setChamberSlots] = useState([]);
+  const [selectedChamber, setSelectedChamber] = useState(null);
+  const [loadingChambers, setLoadingChambers] = useState(true);
+
   // Doctor display values
   const docName = formatDoctorName(doctor?.name);
   const docPhoto = doctor?.photoUrl || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400';
   const docDegree = doctor?.degree || 'MBBS, MD';
-  const docFee = formatCurrency(doctor?.consultationFee);
+  const docFee = formatCurrency(selectedChamber?.consultationFee || doctor?.consultationFee);
+
+  // Fetch visiting pharmacy chambers for this doctor
+  useEffect(() => {
+    if (doctor?.id) {
+      api.get(`/pharmacies/doctor/${doctor.id}`)
+        .then(res => {
+          if (Array.isArray(res.data) && res.data.length > 0) {
+            setChamberSlots(res.data);
+            setSelectedChamber(res.data[0]);
+          }
+        })
+        .catch(err => {
+          console.warn('Could not load doctor visiting chambers:', err);
+        })
+        .finally(() => setLoadingChambers(false));
+    }
+  }, [doctor?.id]);
 
   // Generate 5 days starting tomorrow
   const days = Array.from({ length: 5 }, (_, i) => {
@@ -53,9 +74,10 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
   const timeSlots = [
     { label: '10:00 AM', time: '10:00:00' },
     { label: '11:30 AM', time: '11:30:00' },
+    { label: '12:00 PM', time: '12:00:00' },
     { label: '02:00 PM', time: '14:00:00' },
-    { label: '04:00 PM', time: '16:00:00' },
     { label: '05:30 PM', time: '17:30:00' },
+    { label: '07:00 PM', time: '19:00:00' },
   ];
 
   // 10-minute hold countdown timer
@@ -85,10 +107,12 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
       const chosenDay = days[selectedDate];
       const slotDatetime = `${chosenDay.isoDate}T${selectedTime}`;
 
-      // 1. Hold slot via concurrency-safe API
+      // 1. Hold slot via concurrency-safe API with chamber and pharmacy binding
       const holdRes = await api.post('/appointments/hold-slot', {
         doctorId: doctor.id,
-        slotDatetime
+        slotDatetime,
+        pharmacyId: selectedChamber?.pharmacyId || null,
+        chamberName: selectedChamber ? `${selectedChamber.pharmacyName} (${selectedChamber.chamberRoom || 'Chamber 1'})` : 'Hospital Central OPD'
       });
       const appt = holdRes.data;
       setHeldAppointment(appt);
@@ -181,8 +205,12 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
 
     const chosenDay = days[selectedDate];
     const appointmentToken = heldAppointment?.id;
+    const chamberDisplayName = selectedChamber ? selectedChamber.pharmacyName : (heldAppointment?.chamberName || 'Hospital Central OPD');
+    const chamberAddr = selectedChamber?.pharmacyAddress || 'Main OPD Desk';
     const passData = {
-      hospital: 'AuraHealth Medical Center',
+      hospital: 'AuraHealth Medical Network',
+      chamberName: chamberDisplayName,
+      chamberAddress: chamberAddr,
       appointmentId: appointmentToken,
       patientName: user?.name || 'Registered Patient',
       patientEmail: user?.email || 'patient@health.com',
@@ -262,10 +290,63 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
         {/* STEP 1: SELECT SLOT */}
         {step === 'SELECT' && (
           <div>
+            {/* Visiting Chamber / Pharmacy Selection */}
+            {chamberSlots.length > 0 && (
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>1. Choose Visiting Chamber</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700 }}>
+                    {chamberSlots.length} Chamber Locations
+                  </span>
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                  {chamberSlots.map((ch) => {
+                    const isSelected = selectedChamber?.id === ch.id;
+                    return (
+                      <div
+                        key={ch.id}
+                        onClick={() => setSelectedChamber(ch)}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: 'var(--radius-md)',
+                          border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border-medium)',
+                          background: isSelected ? 'var(--primary-subtle)' : 'var(--bg-elevated)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.875rem', color: isSelected ? 'var(--primary)' : 'var(--text-primary)' }}>
+                              {ch.pharmacyName}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                              📍 {ch.pharmacyAddress || ch.locality}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)' }}>
+                              ₹{ch.consultationFee}
+                            </div>
+                            <div style={{ fontSize: '0.725rem', color: 'var(--secondary)', fontWeight: 600 }}>
+                              {ch.timeSlot}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                          Sitting: <strong>{ch.availableDays}</strong> &bull; {ch.chamberRoom || 'Chamber 1'}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Select Date */}
             <div style={{ marginBottom: '1.25rem' }}>
               <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>
-                1. Select Consultation Date
+                {chamberSlots.length > 0 ? '2.' : '1.'} Select Consultation Date
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
                 {days.map((day) => (
@@ -534,12 +615,18 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
                 />
               </div>
 
-              <div>
+              <div style={{ textAlign: 'center' }}>
                 <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-                  Hospital Arrival Check-in Pass
+                  Hospital & Visiting Chamber Check-in Pass
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  Show this QR code at hospital reception kiosk or scan with reception staff on arrival
+                <div style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700, marginTop: '3px' }}>
+                  {selectedChamber?.pharmacyName || heldAppointment?.chamberName || 'Hospital Central OPD'}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  {selectedChamber?.pharmacyAddress || 'Central Consultation OPD Desk'}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Show this QR code or digital receipt at the pharmacy reception desk upon arrival & exit
                 </div>
               </div>
             </div>

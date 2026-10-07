@@ -39,6 +39,12 @@ export default function Register() {
     specialization: 'General Physician',
     departmentId: 1,
     consultationFee: 500,
+    city: 'Uttarpara',
+    district: 'Hooghly',
+    state: 'West Bengal',
+    locality: 'Makhla',
+    clinicAddress: 'Station Road West, Uttarpara',
+    preferredPharmacyId: '',
     latitude: 22.6730,
     longitude: 88.3340,
     bio: ''
@@ -47,6 +53,7 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [departments, setDepartments] = useState([]);
+  const [pharmacies, setPharmacies] = useState([]);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const { signup, loading } = useAuth();
@@ -68,6 +75,10 @@ export default function Register() {
     api.get('/departments')
       .then(res => setDepartments(res.data))
       .catch(err => console.error('Failed to load departments', err));
+
+    api.get('/pharmacies')
+      .then(res => setPharmacies(Array.isArray(res.data) ? res.data : []))
+      .catch(err => console.error('Failed to load pharmacies', err));
   }, []);
 
   const handleChange = (e) => {
@@ -357,9 +368,22 @@ export default function Register() {
                 padding: '1.25rem',
                 marginBottom: '1.5rem'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem', color: '#A5B4FC', fontWeight: 700 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem', color: '#A5B4FC', fontWeight: 700 }}>
                   <Stethoscope size={18} />
-                  <span>Doctor Professional Credentials</span>
+                  <span>Doctor Credentials & Preferred Chamber Location</span>
+                </div>
+
+                <div style={{
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.25)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '10px 12px',
+                  marginBottom: '1rem',
+                  fontSize: '0.78rem',
+                  color: '#93C5FD',
+                  lineHeight: 1.45
+                }}>
+                  <strong>📋 Approval Workflow:</strong> When registering, choose your preferred city, locality, and visiting pharmacy chamber. Your application is reviewed by Platform Admins; once approved, your request is sent to the selected pharmacy chamber to configure your sitting schedule.
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
@@ -390,6 +414,54 @@ export default function Register() {
                   </div>
                 </div>
 
+                {/* Preferred Location and Pharmacy Chamber Selection */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div>
+                    <label className="form-label">Preferred Practicing City</label>
+                    <select
+                      name="city"
+                      className="form-select"
+                      value={formData.city}
+                      onChange={handleChange}
+                    >
+                      <option value="Uttarpara">Uttarpara</option>
+                      <option value="Konnagar">Konnagar</option>
+                      <option value="Howrah">Howrah</option>
+                      <option value="Kolkata">Kolkata</option>
+                      <option value="Bengaluru">Bengaluru</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="form-label">Locality / Area</label>
+                    <input
+                      name="locality"
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. Makhla, Bhadrakali"
+                      value={formData.locality}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Preferred Pharmacy Chamber</label>
+                  <select
+                    name="preferredPharmacyId"
+                    className="form-select"
+                    value={formData.preferredPharmacyId}
+                    onChange={handleChange}
+                  >
+                    <option value="">-- Select Preferred Pharmacy Chamber --</option>
+                    {pharmacies.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.locality || p.city})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
                     <label className="form-label">Consultation Fee (INR)</label>
@@ -403,14 +475,13 @@ export default function Register() {
                   </div>
 
                   <div>
-                    <label className="form-label">Clinic Latitude / Longitude</label>
+                    <label className="form-label">Clinic / Practice Address</label>
                     <input
-                      name="latitude"
-                      type="number"
-                      step="any"
+                      name="clinicAddress"
+                      type="text"
                       className="form-input"
-                      placeholder="12.9716"
-                      value={formData.latitude}
+                      placeholder="e.g. Near Makhla More"
+                      value={formData.clinicAddress}
                       onChange={handleChange}
                     />
                   </div>

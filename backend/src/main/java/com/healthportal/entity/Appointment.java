@@ -42,6 +42,16 @@ public class Appointment {
     @Column(name = "patient_arrival_marked")
     private Boolean patientArrivalMarked = false;
 
+    @Column(name = "patient_exit_marked")
+    private Boolean patientExitMarked = false;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "pharmacy_id")
+    private Pharmacy pharmacy;
+
+    @Column(name = "chamber_name", length = 100)
+    private String chamberName;
+
     @Column(name = "cancellation_reason")
     private String cancellationReason;
 
@@ -124,6 +134,30 @@ public class Appointment {
 
     public void setPatientArrivalMarked(Boolean patientArrivalMarked) {
         this.patientArrivalMarked = patientArrivalMarked;
+    }
+
+    public Boolean getPatientExitMarked() {
+        return patientExitMarked;
+    }
+
+    public void setPatientExitMarked(Boolean patientExitMarked) {
+        this.patientExitMarked = patientExitMarked;
+    }
+
+    public Pharmacy getPharmacy() {
+        return pharmacy;
+    }
+
+    public void setPharmacy(Pharmacy pharmacy) {
+        this.pharmacy = pharmacy;
+    }
+
+    public String getChamberName() {
+        return chamberName;
+    }
+
+    public void setChamberName(String chamberName) {
+        this.chamberName = chamberName;
     }
 
     public String getCancellationReason() {

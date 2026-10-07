@@ -46,6 +46,9 @@ public class AppointmentService {
     private PrescriptionRepository prescriptionRepository;
 
     @Autowired
+    private com.healthportal.repository.PharmacyRepository pharmacyRepository;
+
+    @Autowired
     private AuditService auditService;
 
     @Autowired
@@ -92,9 +95,19 @@ public class AppointmentService {
                 holdExpiry
         );
 
+        if (request.getPharmacyId() != null) {
+            pharmacyRepository.findById(request.getPharmacyId()).ifPresent(appointment::setPharmacy);
+        }
+        if (request.getChamberName() != null && !request.getChamberName().isBlank()) {
+            appointment.setChamberName(request.getChamberName());
+        } else if (appointment.getPharmacy() != null) {
+            appointment.setChamberName(appointment.getPharmacy().getName());
+        }
+
         appointment = appointmentRepository.save(appointment);
         auditService.log(patientId, "SLOT_HOLD", "appointments", appointment.getId(),
-                "Held slot for doctor ID " + doctor.getId() + " at " + request.getSlotDatetime());
+                "Held slot for doctor ID " + doctor.getId() + " at " + request.getSlotDatetime() +
+                (appointment.getChamberName() != null ? " (" + appointment.getChamberName() + ")" : ""));
 
         return mapToDto(appointment);
     }
@@ -262,6 +275,13 @@ public class AppointmentService {
         dto.setSlotHoldExpiry(a.getSlotHoldExpiry());
         dto.setConsultationFee(a.getDoctor().getConsultationFee());
         dto.setPatientArrivalMarked(a.getPatientArrivalMarked());
+        dto.setPatientExitMarked(a.getPatientExitMarked());
+        if (a.getPharmacy() != null) {
+            dto.setPharmacyId(a.getPharmacy().getId());
+            dto.setPharmacyName(a.getPharmacy().getName());
+            dto.setPharmacyAddress(a.getPharmacy().getAddress());
+        }
+        dto.setChamberName(a.getChamberName());
         dto.setCancellationReason(a.getCancellationReason());
         dto.setRefundStatus(a.getRefundStatus());
         dto.setCreatedAt(a.getCreatedAt());
@@ -276,5 +296,39 @@ public class AppointmentService {
         dto.setHasPrescription(hasPrescription);
 
         return dto;
+    }
+
+    public List<AppointmentDto> getPharmacyAppointments(Long pharmacyId) {
+        return appointmentRepository.findByPharmacyIdOrderBySlotDatetimeDesc(pharmacyId).stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public AppointmentDto markPatientExit(Long appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + appointmentId));
+        appointment.setPatientExitMarked(true);
+        appointment.setStatus(AppointmentStatus.COMPLETED);
+        appointment = appointmentRepository.save(appointment);
+        auditService.log(null, "PATIENT_EXIT_MARKED", "appointments", appointment.getId(),
+                "Patient exit validated and appointment marked COMPLETED");
+        return mapToDto(appointment);
+    }
+
+    @Transactional
+    public AppointmentDto validateQrCode(Long appointmentId, String action) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + appointmentId));
+        if ("EXIT".equalsIgnoreCase(action)) {
+            appointment.setPatientExitMarked(true);
+            appointment.setStatus(AppointmentStatus.COMPLETED);
+        } else {
+            appointment.setPatientArrivalMarked(true);
+        }
+        appointment = appointmentRepository.save(appointment);
+        auditService.log(null, "QR_VALIDATED", "appointments", appointment.getId(),
+                "QR receipt validated (" + action + ") for patient: " + appointment.getPatient().getName());
+        return mapToDto(appointment);
     }
 }

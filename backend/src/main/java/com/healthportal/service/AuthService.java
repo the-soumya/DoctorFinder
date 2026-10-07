@@ -128,11 +128,11 @@ public class AuthService {
                     signupRequest.getBio() != null ? signupRequest.getBio() : "Experienced healthcare specialist committed to patient wellness.",
                     "MBBS, MD",
                     "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400",
-                    "Uttarpara",
-                    "Hooghly",
-                    "West Bengal",
-                    "Uttarpara Central",
-                    "Main Clinic, Uttarpara"
+                    signupRequest.getCity() != null ? signupRequest.getCity() : "Uttarpara",
+                    signupRequest.getDistrict() != null ? signupRequest.getDistrict() : "Hooghly",
+                    signupRequest.getState() != null ? signupRequest.getState() : "West Bengal",
+                    signupRequest.getLocality() != null ? signupRequest.getLocality() : "Makhla",
+                    signupRequest.getClinicAddress() != null ? signupRequest.getClinicAddress() : "Visiting Outpatient Chamber"
             );
             doctor = doctorRepository.save(doctor);
             doctorId = doctor.getId();

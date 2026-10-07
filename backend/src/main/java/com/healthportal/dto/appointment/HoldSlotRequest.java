@@ -13,6 +13,9 @@ public class HoldSlotRequest {
     @Future(message = "Slot datetime must be in the future")
     private LocalDateTime slotDatetime;
 
+    private Long pharmacyId;
+    private String chamberName;
+
     public Long getDoctorId() {
         return doctorId;
     }
@@ -27,5 +30,21 @@ public class HoldSlotRequest {
 
     public void setSlotDatetime(LocalDateTime slotDatetime) {
         this.slotDatetime = slotDatetime;
+    }
+
+    public Long getPharmacyId() {
+        return pharmacyId;
+    }
+
+    public void setPharmacyId(Long pharmacyId) {
+        this.pharmacyId = pharmacyId;
+    }
+
+    public String getChamberName() {
+        return chamberName;
+    }
+
+    public void setChamberName(String chamberName) {
+        this.chamberName = chamberName;
     }
 }

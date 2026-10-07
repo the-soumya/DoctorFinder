@@ -24,6 +24,11 @@ public class AppointmentDto {
     private PaymentStatus paymentStatus;
     private String razorpayOrderId;
     private Boolean patientArrivalMarked;
+    private Boolean patientExitMarked;
+    private Long pharmacyId;
+    private String pharmacyName;
+    private String pharmacyAddress;
+    private String chamberName;
     private Boolean hasPrescription;
     private String cancellationReason;
     private String refundStatus;
@@ -181,6 +186,46 @@ public class AppointmentDto {
 
     public void setRefundStatus(String refundStatus) {
         this.refundStatus = refundStatus;
+    }
+
+    public Boolean getPatientExitMarked() {
+        return patientExitMarked;
+    }
+
+    public void setPatientExitMarked(Boolean patientExitMarked) {
+        this.patientExitMarked = patientExitMarked;
+    }
+
+    public Long getPharmacyId() {
+        return pharmacyId;
+    }
+
+    public void setPharmacyId(Long pharmacyId) {
+        this.pharmacyId = pharmacyId;
+    }
+
+    public String getPharmacyName() {
+        return pharmacyName;
+    }
+
+    public void setPharmacyName(String pharmacyName) {
+        this.pharmacyName = pharmacyName;
+    }
+
+    public String getPharmacyAddress() {
+        return pharmacyAddress;
+    }
+
+    public void setPharmacyAddress(String pharmacyAddress) {
+        this.pharmacyAddress = pharmacyAddress;
+    }
+
+    public String getChamberName() {
+        return chamberName;
+    }
+
+    public void setChamberName(String chamberName) {
+        this.chamberName = chamberName;
     }
 
     public Instant getCreatedAt() {

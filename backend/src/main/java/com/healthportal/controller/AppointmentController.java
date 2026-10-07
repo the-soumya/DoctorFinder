@@ -60,6 +60,29 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.markPatientArrival(id, userDetails.getId()));
     }
 
+    @PostMapping("/{id}/mark-exit")
+    @PreAuthorize("hasRole('PHARMACIST_RECEPTIONIST') or hasRole('ADMIN')")
+    @Operation(summary = "Mark patient consultation completion and chamber exit (Receptionist/Pharmacist only)")
+    public ResponseEntity<AppointmentDto> markExit(@PathVariable Long id) {
+        return ResponseEntity.ok(appointmentService.markPatientExit(id));
+    }
+
+    @PostMapping("/{id}/validate-qr")
+    @PreAuthorize("hasRole('PHARMACIST_RECEPTIONIST') or hasRole('ADMIN')")
+    @Operation(summary = "Validate patient QR check-in pass or paper slip at chamber entrance or exit")
+    public ResponseEntity<AppointmentDto> validateQr(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "ENTRY") String action) {
+        return ResponseEntity.ok(appointmentService.validateQrCode(id, action));
+    }
+
+    @GetMapping("/pharmacy/{pharmacyId}")
+    @PreAuthorize("hasRole('PHARMACIST_RECEPTIONIST') or hasRole('ADMIN')")
+    @Operation(summary = "Get list of appointments booked at a specific pharmacy visiting chamber")
+    public ResponseEntity<List<AppointmentDto>> getPharmacyAppointments(@PathVariable Long pharmacyId) {
+        return ResponseEntity.ok(appointmentService.getPharmacyAppointments(pharmacyId));
+    }
+
     @GetMapping("/my")
     @PreAuthorize("hasRole('PATIENT')")
     @Operation(summary = "Get list of appointments for current logged in patient")

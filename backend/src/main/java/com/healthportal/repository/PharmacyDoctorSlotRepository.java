@@ -10,4 +10,5 @@ import java.util.List;
 public interface PharmacyDoctorSlotRepository extends JpaRepository<PharmacyDoctorSlot, Long> {
     List<PharmacyDoctorSlot> findByPharmacyId(Long pharmacyId);
     List<PharmacyDoctorSlot> findByDoctorId(Long doctorId);
+    List<PharmacyDoctorSlot> findByPharmacyIdAndDoctorId(Long pharmacyId, Long doctorId);
 }

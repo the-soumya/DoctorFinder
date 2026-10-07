@@ -36,6 +36,12 @@ public class PharmacyController {
         return ResponseEntity.ok(pharmacyService.getPharmacyById(id));
     }
 
+    @GetMapping("/doctor/{doctorId}")
+    @Operation(summary = "Get all pharmacy chambers where a doctor sits and consults")
+    public ResponseEntity<List<Map<String, Object>>> getChambersByDoctor(@PathVariable Long doctorId) {
+        return ResponseEntity.ok(pharmacyService.getChambersByDoctorId(doctorId));
+    }
+
     @GetMapping("/me")
     @PreAuthorize("hasRole('PHARMACIST_RECEPTIONIST')")
     @Operation(summary = "Get logged in pharmacy profile")

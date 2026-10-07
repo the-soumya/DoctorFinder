@@ -17,21 +17,68 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Bell
+  Bell,
+  Building2,
+  Trash2,
+  PlusCircle,
+  UserPlus,
+  QrCode,
+  MapPin,
+  Code2
 } from 'lucide-react';
-import { formatDoctorName } from '../utils/formatters';
+import { formatDoctorName, formatCurrency } from '../utils/formatters';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [auditLogs, setAuditLogs] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [pharmacies, setPharmacies] = useState([]);
+  const [allAppointments, setAllAppointments] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [pendingUsers, setPendingUsers] = useState([]);
-  const [activeTab, setActiveTab] = useState('analytics');
+  const [activeTab, setActiveTab] = useState('analytics'); // 'analytics', 'approvals', 'doctors', 'pharmacies', 'appointments', 'audit'
   const [selectedDoctorEdit, setSelectedDoctorEdit] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [statusMessage, setStatusMessage] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Modals for Add Doctor & Add Pharmacy
+  const [showAddDoctorModal, setShowAddDoctorModal] = useState(false);
+  const [newDoctorForm, setNewDoctorForm] = useState({
+    name: '',
+    email: '',
+    password: 'doctor123',
+    phone: '+91 98311 00000',
+    specialization: 'General Physician',
+    degree: 'MBBS, MD',
+    departmentId: 1,
+    consultationFee: '500',
+    experienceYears: '8',
+    city: 'Uttarpara',
+    district: 'Hooghly',
+    state: 'West Bengal',
+    locality: 'Makhla',
+    clinicAddress: 'Station Road West, Uttarpara',
+    photoUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400',
+    bio: 'Senior consultant visiting doctor available for outpatient chamber consultation.'
+  });
+
+  const [showAddPharmacyModal, setShowAddPharmacyModal] = useState(false);
+  const [newPharmacyForm, setNewPharmacyForm] = useState({
+    name: '',
+    licenseNumber: 'WB-PHA-2024-' + Math.floor(1000 + Math.random() * 9000),
+    email: '',
+    password: 'pharmacy123',
+    phone: '+91 98311 00000',
+    address: '',
+    city: 'Uttarpara',
+    district: 'Hooghly',
+    state: 'West Bengal',
+    locality: 'Makhla',
+    operatingHours: '08:00 AM - 10:00 PM',
+    latitude: 22.6735,
+    longitude: 88.3345
+  });
 
   const { user } = useAuth();
 
@@ -43,16 +90,20 @@ export default function AdminDashboard() {
   const fetchAdminData = async () => {
     setLoading(true);
     try {
-      const [statsRes, auditRes, docsRes, deptsRes] = await Promise.all([
-        api.get('/admin/stats'),
-        api.get('/admin/audit-logs'),
-        api.get('/doctors'),
-        api.get('/departments')
+      const [statsRes, auditRes, docsRes, deptsRes, pharmsRes, apptsRes] = await Promise.all([
+        api.get('/admin/stats').catch(() => ({ data: null })),
+        api.get('/admin/audit-logs').catch(() => ({ data: [] })),
+        api.get('/doctors').catch(() => ({ data: [] })),
+        api.get('/departments').catch(() => ({ data: [] })),
+        api.get('/pharmacies').catch(() => ({ data: [] })),
+        api.get('/admin/appointments').catch(() => ({ data: [] }))
       ]);
       setStats(statsRes.data);
-      setAuditLogs(auditRes.data);
-      setDoctors(docsRes.data);
-      setDepartments(deptsRes.data);
+      setAuditLogs(auditRes.data || []);
+      setDoctors(docsRes.data || []);
+      setDepartments(deptsRes.data || []);
+      setPharmacies(pharmsRes.data || []);
+      setAllAppointments(apptsRes.data || []);
     } catch (err) {
       console.error('Failed to load admin data', err);
     } finally {
@@ -75,19 +126,90 @@ export default function AdminDashboard() {
       setStatusMessage('Account approved successfully! User can now log in.');
       fetchPendingApprovals();
       fetchAdminData();
+      setTimeout(() => setStatusMessage(''), 4000);
     } catch (err) {
       alert('Failed to approve user: ' + (err.response?.data?.message || err.message));
     }
   };
 
   const handleReject = async (userId, name) => {
-    if (!window.confirm(`Reject and revoke account for "${name}"? They will not be able to log in.`)) return;
+    if (!window.confirm(`Reject and revoke account for "${name}"?`)) return;
     try {
       await api.put(`/admin/users/${userId}/reject`);
       setStatusMessage(`Account for "${name}" has been rejected.`);
       fetchPendingApprovals();
+      setTimeout(() => setStatusMessage(''), 4000);
     } catch (err) {
       alert('Failed to reject user: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleDeleteDoctor = async (id, name) => {
+    if (!window.confirm(`Delete Dr. ${name}? This will remove the doctor and their chamber slots.`)) return;
+    try {
+      await api.delete(`/admin/doctors/${id}`);
+      setStatusMessage(`Doctor ${name} removed from system.`);
+      fetchAdminData();
+      setTimeout(() => setStatusMessage(''), 4000);
+    } catch (err) {
+      alert('Failed to delete doctor: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleCreateDoctor = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/admin/doctors', {
+        ...newDoctorForm,
+        departmentId: parseInt(newDoctorForm.departmentId, 10),
+        consultationFee: parseFloat(newDoctorForm.consultationFee),
+        experienceYears: parseInt(newDoctorForm.experienceYears, 10),
+        latitude: 22.6730,
+        longitude: 88.3340
+      });
+      setStatusMessage(`Dr. ${newDoctorForm.name} successfully created & approved!`);
+      setShowAddDoctorModal(false);
+      fetchAdminData();
+      setTimeout(() => setStatusMessage(''), 4000);
+    } catch (err) {
+      alert('Failed to add doctor: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleDeletePharmacy = async (id, name) => {
+    if (!window.confirm(`Delete Pharmacy "${name}"? This will remove the pharmacy and its visiting chamber slots.`)) return;
+    try {
+      await api.delete(`/admin/pharmacies/${id}`);
+      setStatusMessage(`Pharmacy "${name}" deleted.`);
+      fetchAdminData();
+      setTimeout(() => setStatusMessage(''), 4000);
+    } catch (err) {
+      alert('Failed to delete pharmacy: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleCreatePharmacy = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/admin/pharmacies', newPharmacyForm);
+      setStatusMessage(`Pharmacy "${newPharmacyForm.name}" created & approved!`);
+      setShowAddPharmacyModal(false);
+      fetchAdminData();
+      setTimeout(() => setStatusMessage(''), 4000);
+    } catch (err) {
+      alert('Failed to add pharmacy: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleDeleteAppointment = async (id) => {
+    if (!window.confirm(`Cancel/Delete Appointment #${id}?`)) return;
+    try {
+      await api.delete(`/admin/appointments/${id}`);
+      setStatusMessage(`Appointment #${id} cancelled & removed.`);
+      fetchAdminData();
+      setTimeout(() => setStatusMessage(''), 4000);
+    } catch (err) {
+      alert('Failed to delete appointment: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -95,7 +217,7 @@ export default function AdminDashboard() {
     setSelectedDoctorEdit(doc);
     setEditFormData({
       specialization: doc.specialization,
-      departmentId: doc.departmentId,
+      departmentId: doc.departmentId || (departments[0]?.id || 1),
       consultationFee: doc.consultationFee,
       experienceYears: doc.experienceYears,
       rating: doc.rating,
@@ -107,9 +229,10 @@ export default function AdminDashboard() {
     e.preventDefault();
     try {
       await api.put(`/doctors/${selectedDoctorEdit.id}`, editFormData);
-      setStatusMessage(`Updated profile and department allocation for Dr. ${selectedDoctorEdit.name}!`);
+      setStatusMessage(`Updated profile and allocation for Dr. ${selectedDoctorEdit.name}!`);
       setSelectedDoctorEdit(null);
       fetchAdminData();
+      setTimeout(() => setStatusMessage(''), 4000);
     } catch (err) {
       alert('Failed to update doctor profile');
     }
@@ -120,14 +243,14 @@ export default function AdminDashboard() {
       {/* Title */}
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#A855F7', marginBottom: '4px' }}>
-          <ShieldCheck size={20} />
+          <Code2 size={20} />
           <span style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-            Hospital Enterprise Administration
+            Developer & Platform Administrator Console
           </span>
         </div>
-        <h1 style={{ fontSize: '2.2rem', fontWeight: 800 }}>Executive Analytics & Audit Console</h1>
+        <h1 style={{ fontSize: '2.2rem', fontWeight: 800 }}>Master Healthcare & Chamber Operations</h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-          Hospital-wide performance metrics, immutable audit trail monitoring, and clinical department management.
+          As the platform creators, oversee smooth operations across all doctor schedules, pharmacy chambers, and patient appointments.
         </p>
       </div>
 
@@ -157,7 +280,7 @@ export default function AdminDashboard() {
           id="tab-admin-analytics"
         >
           <BarChart3 size={16} />
-          <span>Analytics Dashboard</span>
+          <span>Analytics</span>
         </button>
 
         <button
@@ -180,6 +303,33 @@ export default function AdminDashboard() {
         </button>
 
         <button
+          onClick={() => setActiveTab('doctors')}
+          className={`btn ${activeTab === 'doctors' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+          id="tab-admin-doctors"
+        >
+          <Stethoscope size={16} />
+          <span>Manage Doctors ({doctors.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('pharmacies')}
+          className={`btn ${activeTab === 'pharmacies' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+          id="tab-admin-pharmacies"
+        >
+          <Building2 size={16} />
+          <span>Manage Pharmacies ({pharmacies.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('appointments')}
+          className={`btn ${activeTab === 'appointments' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
+          id="tab-admin-appointments"
+        >
+          <Calendar size={16} />
+          <span>Manage Appointments ({allAppointments.length})</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('audit')}
           className={`btn ${activeTab === 'audit' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
           id="tab-admin-audit"
@@ -187,21 +337,11 @@ export default function AdminDashboard() {
           <Lock size={16} />
           <span>Immutable Audit Logs ({auditLogs.length})</span>
         </button>
-
-        <button
-          onClick={() => setActiveTab('doctors')}
-          className={`btn ${activeTab === 'doctors' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-          id="tab-admin-doctors"
-        >
-          <Stethoscope size={16} />
-          <span>Doctor & Department Allocation ({doctors.length})</span>
-        </button>
       </div>
 
-      {/* TAB 1: ANALYTICS DASHBOARD */}
+      {/* TAB 1: ANALYTICS */}
       {activeTab === 'analytics' && stats && (
         <div>
-          {/* Key KPI Metric Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '2.5rem' }}>
             <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-lg)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', marginBottom: '8px' }}>
@@ -249,125 +389,36 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-
-          {/* Breakdown Charts Section */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-            {/* Department Breakdown */}
-            <div className="glass-panel" style={{ padding: '1.75rem', borderRadius: 'var(--radius-xl)' }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Layers size={18} color="var(--primary)" />
-                <span>Appointments by Department</span>
-              </h2>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {stats.departmentDistribution?.map((dept, i) => (
-                  <div key={i}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: 600 }}>{dept.department}</span>
-                      <span style={{ color: 'var(--primary)', fontWeight: 700 }}>{dept.count} Consultations</span>
-                    </div>
-                    <div style={{ height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%',
-                        width: `${Math.min(100, (dept.count / Math.max(1, stats.totalAppointments)) * 100)}%`,
-                        background: 'var(--grad-primary)',
-                        borderRadius: '4px'
-                      }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Doctor Load Breakdown */}
-            <div className="glass-panel" style={{ padding: '1.75rem', borderRadius: 'var(--radius-xl)' }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Users size={18} color="#6366F1" />
-                <span>Doctor Workload Distribution</span>
-              </h2>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {stats.doctorLoad?.map((doc, i) => (
-                  <div key={i}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: 600 }}>{doc.doctorName}</span>
-                      <span style={{ color: '#A5B4FC', fontWeight: 700 }}>{doc.appointmentCount} Patients</span>
-                    </div>
-                    <div style={{ height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%',
-                        width: `${Math.min(100, (doc.appointmentCount / Math.max(1, stats.totalAppointments)) * 100)}%`,
-                        background: 'var(--grad-accent)',
-                        borderRadius: '4px'
-                      }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
-      {/* TAB: PENDING APPROVALS */}
+      {/* TAB 2: PENDING APPROVALS */}
       {activeTab === 'approvals' && (
-        <div className="glass-panel" style={{ padding: '1.75rem', borderRadius: 'var(--radius-xl)' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Clock size={18} color="#F59E0B" />
-            <span>Pending Account Approvals</span>
+        <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-xl)' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.25rem' }}>
+            Board Review Queue: Pending Registrations
           </h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-            Doctor and Pharmacy accounts require manual verification before they can log in.
-          </p>
 
           {pendingUsers.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-              <CheckCircle size={48} style={{ margin: '0 auto 1rem', opacity: 0.4 }} />
-              <p>No pending approvals — all accounts are up to date.</p>
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+              <CheckCircle size={40} color="#10B981" style={{ margin: '0 auto 12px' }} />
+              <p>No accounts awaiting review. All doctors and pharmacy chambers are verified!</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {pendingUsers.map(u => (
-                <div key={u.id} className="card" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }} id={`pending-user-${u.id}`}>
-                  <div style={{
-                    width: '44px', height: '44px', borderRadius: '50%',
-                    background: u.role === 'ROLE_DOCTOR' ? 'rgba(99,102,241,0.2)' : 'rgba(245,158,11,0.2)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                  }}>
-                    {u.role === 'ROLE_DOCTOR' ? <Stethoscope size={22} color="#A5B4FC" /> : <Users size={22} color="#FCD34D" />}
+                <div key={u.id} className="card" style={{ padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>{u.name}</h3>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 600 }}>{u.email} • {u.role}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>📍 {u.address || 'Location specified during registration'}</div>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: '1rem' }}>{u.name}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{u.email} • {u.phone}</div>
-                    <div style={{ marginTop: '4px' }}>
-                      <span style={{
-                        fontSize: '0.72rem', fontWeight: 700, padding: '2px 10px',
-                        background: u.role === 'ROLE_DOCTOR' ? 'rgba(99,102,241,0.15)' : 'rgba(245,158,11,0.15)',
-                        color: u.role === 'ROLE_DOCTOR' ? '#A5B4FC' : '#FCD34D',
-                        borderRadius: 'var(--radius-full)'
-                      }}>
-                        {u.role === 'ROLE_DOCTOR' ? '🩺 Doctor' : '💊 Pharmacy / Receptionist'}
-                      </span>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                    <button
-                      className="btn btn-primary btn-sm"
-                      id={`btn-approve-${u.id}`}
-                      onClick={() => handleApprove(u.id)}
-                      style={{ gap: '6px' }}
-                    >
-                      <CheckCircle size={14} />
-                      <span>Approve</span>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={() => handleApprove(u.id)} className="btn btn-primary btn-sm">
+                      <CheckCircle size={14} /> Approve & Grant Access
                     </button>
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      id={`btn-reject-${u.id}`}
-                      onClick={() => handleReject(u.id, u.name)}
-                      style={{ gap: '6px', color: '#FB7185', borderColor: 'rgba(244,63,94,0.3)' }}
-                    >
-                      <XCircle size={14} />
-                      <span>Reject</span>
+                    <button onClick={() => handleReject(u.id, u.name)} className="btn btn-secondary btn-sm" style={{ color: '#EF4444' }}>
+                      <XCircle size={14} /> Reject
                     </button>
                   </div>
                 </div>
@@ -377,114 +428,217 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* TAB 2: IMMUTABLE AUDIT LOGS */}
-      {activeTab === 'audit' && (
-        <div className="glass-panel" style={{ padding: '1.75rem', borderRadius: 'var(--radius-xl)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '10px' }}>
+      {/* TAB 3: MANAGE DOCTORS */}
+      {activeTab === 'doctors' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Lock size={18} color="#10B981" />
-                <span>Immutable Append-Only Audit Trail</span>
-              </h2>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                Protected at the PostgreSQL role level against UPDATE and DELETE operations.
-              </p>
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0 }}>Registered Doctors Management</h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Add new specialist doctors or remove doctors from the system.</p>
             </div>
-
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              background: 'rgba(16, 185, 129, 0.1)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              borderRadius: 'var(--radius-full)',
-              fontSize: '0.75rem',
-              color: '#34D399',
-              fontWeight: 700
-            }}>
-              <span>🛡️ Tamper-Proof Trigger Enforced</span>
-            </div>
+            <button onClick={() => setShowAddDoctorModal(true)} className="btn btn-primary btn-sm">
+              <UserPlus size={16} />
+              <span>Add New Doctor</span>
+            </button>
           </div>
 
-          <div style={{ overflowX: 'auto', maxHeight: '600px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
-                  <th style={{ padding: '10px 14px' }}>Timestamp</th>
-                  <th style={{ padding: '10px 14px' }}>Action</th>
-                  <th style={{ padding: '10px 14px' }}>Table</th>
-                  <th style={{ padding: '10px 14px' }}>User ID</th>
-                  <th style={{ padding: '10px 14px' }}>Record ID</th>
-                  <th style={{ padding: '10px 14px' }}>Event Details</th>
-                </tr>
-              </thead>
-              <tbody>
-                {auditLogs.map(log => (
-                  <tr key={log.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)' }} id={`audit-log-row-${log.id}`}>
-                    <td style={{ padding: '12px 14px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                      {new Date(log.timestamp).toLocaleString()}
-                    </td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <span className="badge badge-completed" style={{ fontSize: '0.7rem' }}>
-                        {log.action}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 14px', fontFamily: 'monospace', color: 'var(--primary)' }}>
-                      {log.tableAffected}
-                    </td>
-                    <td style={{ padding: '12px 14px' }}>
-                      {log.userId ? `#${log.userId}` : 'SYSTEM'}
-                    </td>
-                    <td style={{ padding: '12px 14px' }}>
-                      {log.recordId ? `#${log.recordId}` : '-'}
-                    </td>
-                    <td style={{ padding: '12px 14px', color: 'var(--text-primary)' }}>
-                      {log.details}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+            {doctors.map(doc => (
+              <div key={doc.id} className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <img src={doc.photoUrl} alt={doc.name} style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }} />
+                    <div>
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>{formatDoctorName(doc.name)}</h3>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--secondary)', fontWeight: 600 }}>{doc.specialization}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{doc.city || 'Uttarpara'}</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                    Fee: ₹{doc.consultationFee} • Experience: {doc.experienceYears} yrs • Rating: ★{doc.rating}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+                  <button onClick={() => handleOpenEditDoctor(doc)} className="btn btn-secondary btn-sm">
+                    <Edit size={14} /> Edit
+                  </button>
+                  <button onClick={() => handleDeleteDoctor(doc.id, doc.name)} className="btn btn-secondary btn-sm" style={{ color: '#EF4444' }}>
+                    <Trash2 size={14} /> Delete
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
+
+          {/* Add Doctor Modal */}
+          {showAddDoctorModal && (
+            <div className="modal-overlay">
+              <div className="modal-content" style={{ maxWidth: '540px', padding: '1.75rem' }}>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '1rem' }}>Add New Doctor</h2>
+                <form onSubmit={handleCreateDoctor}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div className="form-group">
+                      <label className="form-label">Doctor Name</label>
+                      <input type="text" className="form-input" value={newDoctorForm.name} onChange={e => setNewDoctorForm({ ...newDoctorForm, name: e.target.value })} required />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Email</label>
+                      <input type="email" className="form-input" value={newDoctorForm.email} onChange={e => setNewDoctorForm({ ...newDoctorForm, email: e.target.value })} required />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div className="form-group">
+                      <label className="form-label">Specialization</label>
+                      <input type="text" className="form-input" value={newDoctorForm.specialization} onChange={e => setNewDoctorForm({ ...newDoctorForm, specialization: e.target.value })} required />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Department</label>
+                      <select className="form-select" value={newDoctorForm.departmentId} onChange={e => setNewDoctorForm({ ...newDoctorForm, departmentId: e.target.value })}>
+                        {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                    <div className="form-group">
+                      <label className="form-label">Fee (₹)</label>
+                      <input type="number" className="form-input" value={newDoctorForm.consultationFee} onChange={e => setNewDoctorForm({ ...newDoctorForm, consultationFee: e.target.value })} required />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">City</label>
+                      <input type="text" className="form-input" value={newDoctorForm.city} onChange={e => setNewDoctorForm({ ...newDoctorForm, city: e.target.value })} required />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Locality</label>
+                      <input type="text" className="form-input" value={newDoctorForm.locality} onChange={e => setNewDoctorForm({ ...newDoctorForm, locality: e.target.value })} required />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
+                    <button type="button" onClick={() => setShowAddDoctorModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Create Doctor</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* TAB 3: DOCTOR ALLOCATION & PROFILES */}
-      {activeTab === 'doctors' && (
-        <div className="glass-panel" style={{ padding: '1.75rem', borderRadius: 'var(--radius-xl)' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.25rem' }}>
-            Doctor Profiles & Clinical Department Allocations
-          </h2>
+      {/* TAB 4: MANAGE PHARMACIES */}
+      {activeTab === 'pharmacies' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 800, margin: 0 }}>Visiting Pharmacy Chambers Management</h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Add new polyclinics/pharmacies or remove chambers.</p>
+            </div>
+            <button onClick={() => setShowAddPharmacyModal(true)} className="btn btn-primary btn-sm">
+              <PlusCircle size={16} />
+              <span>Add New Pharmacy</span>
+            </button>
+          </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+            {pharmacies.map(pharm => (
+              <div key={pharm.id} className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0 }}>{pharm.name}</h3>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 700, marginTop: '2px' }}>
+                    📍 {pharm.locality}, {pharm.city}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    {pharm.address} • Phone: {pharm.phone}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--secondary)', marginTop: '6px', fontWeight: 600 }}>
+                    Hours: {pharm.operatingHours}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)' }}>
+                  <button onClick={() => handleDeletePharmacy(pharm.id, pharm.name)} className="btn btn-secondary btn-sm" style={{ color: '#EF4444' }}>
+                    <Trash2 size={14} /> Delete Pharmacy
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Add Pharmacy Modal */}
+          {showAddPharmacyModal && (
+            <div className="modal-overlay">
+              <div className="modal-content" style={{ maxWidth: '520px', padding: '1.75rem' }}>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '1rem' }}>Add New Pharmacy Chamber</h2>
+                <form onSubmit={handleCreatePharmacy}>
+                  <div className="form-group">
+                    <label className="form-label">Pharmacy Chamber Name</label>
+                    <input type="text" className="form-input" value={newPharmacyForm.name} onChange={e => setNewPharmacyForm({ ...newPharmacyForm, name: e.target.value })} placeholder="e.g. Bhadrakali Polyclinic & Medicine House" required />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div className="form-group">
+                      <label className="form-label">Login Email</label>
+                      <input type="email" className="form-input" value={newPharmacyForm.email} onChange={e => setNewPharmacyForm({ ...newPharmacyForm, email: e.target.value })} required />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Phone</label>
+                      <input type="text" className="form-input" value={newPharmacyForm.phone} onChange={e => setNewPharmacyForm({ ...newPharmacyForm, phone: e.target.value })} required />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Address</label>
+                    <input type="text" className="form-input" value={newPharmacyForm.address} onChange={e => setNewPharmacyForm({ ...newPharmacyForm, address: e.target.value })} placeholder="GT Road, Uttarpara" required />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div className="form-group">
+                      <label className="form-label">City</label>
+                      <input type="text" className="form-input" value={newPharmacyForm.city} onChange={e => setNewPharmacyForm({ ...newPharmacyForm, city: e.target.value })} required />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Locality</label>
+                      <input type="text" className="form-input" value={newPharmacyForm.locality} onChange={e => setNewPharmacyForm({ ...newPharmacyForm, locality: e.target.value })} required />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
+                    <button type="button" onClick={() => setShowAddPharmacyModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Create Pharmacy</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 5: MANAGE APPOINTMENTS */}
+      {activeTab === 'appointments' && (
+        <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-xl)' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.25rem' }}>
+            All Patient Appointments ({allAppointments.length})
+          </h2>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
-                  <th style={{ padding: '12px 16px' }}>Doctor Name</th>
-                  <th style={{ padding: '12px 16px' }}>Specialization</th>
-                  <th style={{ padding: '12px 16px' }}>Department</th>
-                  <th style={{ padding: '12px 16px' }}>Fee (INR)</th>
-                  <th style={{ padding: '12px 16px' }}>Rating</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>Action</th>
+                  <th style={{ padding: '10px 12px' }}>#ID</th>
+                  <th style={{ padding: '10px 12px' }}>Patient</th>
+                  <th style={{ padding: '10px 12px' }}>Doctor</th>
+                  <th style={{ padding: '10px 12px' }}>Chamber</th>
+                  <th style={{ padding: '10px 12px' }}>Slot Time</th>
+                  <th style={{ padding: '10px 12px' }}>Status</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {doctors.map(doc => (
-                  <tr key={doc.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '14px 16px', fontWeight: 700 }}>{formatDoctorName(doc.name)}</td>
-                    <td style={{ padding: '14px 16px', color: 'var(--primary)' }}>{doc.specialization}</td>
-                    <td style={{ padding: '14px 16px' }}>{doc.departmentName}</td>
-                    <td style={{ padding: '14px 16px' }}>₹{doc.consultationFee}</td>
-                    <td style={{ padding: '14px 16px' }}>★ {doc.rating}</td>
-                    <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                      <button
-                        onClick={() => handleOpenEditDoctor(doc)}
-                        className="btn btn-secondary btn-sm"
-                        id={`btn-edit-doctor-${doc.id}`}
-                      >
-                        <Edit size={14} />
-                        <span>Edit Allocation</span>
+                {allAppointments.map(appt => (
+                  <tr key={appt.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                    <td style={{ padding: '12px' }}>#{appt.id}</td>
+                    <td style={{ padding: '12px', fontWeight: 600 }}>{appt.patientName}</td>
+                    <td style={{ padding: '12px' }}>{formatDoctorName(appt.doctorName)}</td>
+                    <td style={{ padding: '12px' }}>{appt.chamberName || appt.pharmacyName || 'OPD'}</td>
+                    <td style={{ padding: '12px' }}>{new Date(appt.slotDatetime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</td>
+                    <td style={{ padding: '12px' }}>
+                      <span className={`badge badge-${appt.status.toLowerCase()}`}>{appt.status}</span>
+                    </td>
+                    <td style={{ padding: '12px', textAlign: 'right' }}>
+                      <button onClick={() => handleDeleteAppointment(appt.id)} className="btn btn-secondary btn-sm" style={{ color: '#EF4444' }}>
+                        <Trash2 size={13} /> Cancel
                       </button>
                     </td>
                   </tr>
@@ -495,23 +649,41 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* EDIT DOCTOR MODAL */}
+      {/* TAB 6: AUDIT LOGS */}
+      {activeTab === 'audit' && (
+        <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-xl)' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.25rem' }}>
+            System Audit Trail Logs
+          </h2>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
+                  <th style={{ padding: '10px 12px' }}>Timestamp</th>
+                  <th style={{ padding: '10px 12px' }}>Action</th>
+                  <th style={{ padding: '10px 12px' }}>User</th>
+                  <th style={{ padding: '10px 12px' }}>Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditLogs.map(log => (
+                  <tr key={log.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                    <td style={{ padding: '10px 12px' }}>{new Date(log.timestamp).toLocaleString()}</td>
+                    <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--primary)' }}>{log.action}</td>
+                    <td style={{ padding: '10px 12px' }}>{log.performedByEmail || 'System'}</td>
+                    <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{log.details}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Doctor Allocation Modal */}
       {selectedDoctorEdit && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.8)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 3000,
-          padding: '1rem'
-        }}>
-          <div className="card" style={{ width: '100%', maxWidth: '540px', padding: '2rem', background: 'var(--bg-surface)' }}>
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '540px', padding: '1.75rem' }}>
             <h3 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '1.25rem' }}>
               Edit Allocation for {formatDoctorName(selectedDoctorEdit.name)}
             </h3>

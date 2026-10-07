@@ -34,6 +34,12 @@ public class SignupRequest {
     private BigDecimal consultationFee;
     private Integer experienceYears;
     private String bio;
+    private String city;
+    private String district;
+    private String state;
+    private String locality;
+    private String clinicAddress;
+    private Long preferredPharmacyId;
 
     public String getName() {
         return name;
@@ -129,5 +135,53 @@ public class SignupRequest {
 
     public void setBio(String bio) {
         this.bio = bio;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public String getDistrict() {
+        return district;
+    }
+
+    public void setDistrict(String district) {
+        this.district = district;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
+    }
+
+    public String getLocality() {
+        return locality;
+    }
+
+    public void setLocality(String locality) {
+        this.locality = locality;
+    }
+
+    public String getClinicAddress() {
+        return clinicAddress;
+    }
+
+    public void setClinicAddress(String clinicAddress) {
+        this.clinicAddress = clinicAddress;
+    }
+
+    public Long getPreferredPharmacyId() {
+        return preferredPharmacyId;
+    }
+
+    public void setPreferredPharmacyId(Long preferredPharmacyId) {
+        this.preferredPharmacyId = preferredPharmacyId;
     }
 }

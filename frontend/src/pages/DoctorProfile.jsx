@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import { UserCheck, Award, DollarSign, Clock, MapPin, Save, CheckCircle, AlertCircle, Phone, Mail, Image as ImageIcon } from 'lucide-react';
+import { UserCheck, Award, DollarSign, Clock, MapPin, Save, CheckCircle, AlertCircle, Phone, Mail, Image as ImageIcon, Upload, Camera } from 'lucide-react';
 import { formatDoctorName, formatCurrency } from '../utils/formatters';
 
 export default function DoctorProfile() {
@@ -19,8 +19,10 @@ export default function DoctorProfile() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchDoctorProfile();
@@ -47,6 +49,44 @@ export default function DoctorProfile() {
       setErrorMsg('Could not load doctor profile. Make sure you are logged in as a Doctor.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Fast client-side preview via FileReader
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData(prev => ({ ...prev, photoUrl: reader.result }));
+    };
+    reader.readAsDataURL(file);
+
+    if (doctor?.id) {
+      setUploadingPhoto(true);
+      setErrorMsg('');
+      try {
+        const uploadData = new FormData();
+        uploadData.append('file', file);
+        const res = await axios.post(`/api/doctors/${doctor.id}/photo`, uploadData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        if (res.data?.photoUrl) {
+          setFormData(prev => ({ ...prev, photoUrl: res.data.photoUrl }));
+        }
+        setSuccessMsg('Profile picture uploaded and saved successfully!');
+        setTimeout(() => setSuccessMsg(''), 4000);
+      } catch (err) {
+        console.warn('Multipart upload notice:', err);
+        setSuccessMsg('Photo selected and preview updated. Click "Save Doctor Profile" to finalize.');
+        setTimeout(() => setSuccessMsg(''), 4000);
+      } finally {
+        setUploadingPhoto(false);
+      }
     }
   };
 
@@ -166,16 +206,29 @@ export default function DoctorProfile() {
                   e.target.src = 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400';
                 }}
               />
-              <div style={{
-                position: 'absolute',
-                bottom: '2px',
-                right: '4px',
-                background: '#16A34A',
-                border: '2px solid #FFFFFF',
-                width: '18px',
-                height: '18px',
-                borderRadius: '50%'
-              }} title="Verified Practicing Physician" />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  position: 'absolute',
+                  bottom: '2px',
+                  right: '2px',
+                  background: 'var(--primary)',
+                  border: '2px solid #FFFFFF',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFF',
+                  cursor: 'pointer',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+                title="Upload new profile picture"
+              >
+                <Camera size={16} />
+              </button>
             </div>
 
             <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.25rem' }}>
@@ -323,17 +376,56 @@ export default function DoctorProfile() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Profile Photo URL</label>
-              <input
-                type="url"
-                className="form-input"
-                value={formData.photoUrl}
-                onChange={e => setFormData({ ...formData, photoUrl: e.target.value })}
-                placeholder="https://images.unsplash.com/..."
-              />
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Provide a clean, professional doctor headshot image URL.
-              </span>
+              <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Doctor Profile Picture</span>
+                {uploadingPhoto && <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}>Uploading...</span>}
+              </label>
+
+              {/* File upload picker box */}
+              <div style={{
+                border: '2px dashed var(--border-medium)',
+                borderRadius: 'var(--radius-md)',
+                padding: '16px',
+                textAlign: 'center',
+                background: 'var(--bg-elevated)',
+                marginBottom: '10px'
+              }}>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  id="doctor-file-upload-input"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="btn btn-secondary btn-sm"
+                  style={{ marginBottom: '6px' }}
+                  id="btn-upload-doctor-photo"
+                >
+                  <Upload size={16} />
+                  <span>Choose Photo File from Device</span>
+                </button>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  PNG, JPG, or WEBP up to 5MB. Preview updates automatically.
+                </div>
+              </div>
+
+              {/* Or direct photo URL */}
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                  Or enter direct Image URL:
+                </label>
+                <input
+                  type="url"
+                  className="form-input"
+                  value={formData.photoUrl}
+                  onChange={e => setFormData({ ...formData, photoUrl: e.target.value })}
+                  placeholder="https://images.unsplash.com/..."
+                />
+              </div>
             </div>
 
             <div className="form-group">

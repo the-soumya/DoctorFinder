@@ -1337,78 +1337,8 @@ public class DataInitializer implements CommandLineRunner {
             labReportRepository.save(sampleReport);
         }
 
-        // 6. Seed Pharmacies and Visiting Doctor Chamber Time Slots
-        if (pharmacyRepository.count() <= 1) { // 1 may be the pending test pharmacy
-            User pharmUser = userRepository.findByEmail("pharmacy@health.com").orElse(null);
-            if (pharmUser != null && pharmacyRepository.findByUserId(pharmUser.getId()).isEmpty()) {
-                Pharmacy p1 = new Pharmacy(
-                        "Makhla Medicare Chemists & Polyclinic",
-                        "WB-PHA-2024-8841",
-                        pharmUser,
-                        "Near Makhla High School More, Uttarpara, Hooghly",
-                        "Uttarpara",
-                        "Hooghly",
-                        "West Bengal",
-                        "Makhla",
-                        22.6735,
-                        88.3345,
-                        "+91 98311 55667",
-                        "08:00 AM - 10:00 PM",
-                        true
-                );
-                p1 = pharmacyRepository.save(p1);
-
-                // Attach multiple visiting doctors at different time slots
-                Optional<Doctor> docSharma = doctorRepository.findAll().stream().filter(d -> d.getUser().getEmail().equals("dr.sharma@hospital.com")).findFirst();
-                Optional<Doctor> docMousumi = doctorRepository.findAll().stream().filter(d -> d.getUser().getEmail().equals("dr.mousumi@hospital.com")).findFirst();
-                Optional<Doctor> docSayan = doctorRepository.findAll().stream().filter(d -> d.getUser().getEmail().equals("dr.sayan@hospital.com")).findFirst();
-
-                if (docSharma.isPresent()) {
-                    pharmacyDoctorSlotRepository.save(new PharmacyDoctorSlot(p1, docSharma.get(), "Mon, Wed, Fri", "05:00 PM - 07:30 PM", "Chamber 1", new BigDecimal("750.00"), 20));
-                }
-                if (docMousumi.isPresent()) {
-                    pharmacyDoctorSlotRepository.save(new PharmacyDoctorSlot(p1, docMousumi.get(), "Tue, Thu, Sat", "10:00 AM - 12:30 PM", "Chamber 2", new BigDecimal("450.00"), 25));
-                }
-                if (docSayan.isPresent()) {
-                    pharmacyDoctorSlotRepository.save(new PharmacyDoctorSlot(p1, docSayan.get(), "Sunday", "09:30 AM - 12:00 PM", "Chamber 1", new BigDecimal("650.00"), 15));
-                }
-            }
-
-            // Pharmacy 2: Konnagar
-            User staffUser = userRepository.findByEmail("staff@hospital.com").orElse(null);
-            if (staffUser != null && pharmacyRepository.findByUserId(staffUser.getId()).isEmpty()) {
-                Pharmacy p2 = new Pharmacy(
-                        "Bengal Swasthya Chemists & Doctor Chamber",
-                        "WB-PHA-2024-9102",
-                        staffUser,
-                        "Konnagar Station Road East, Near Bus Stand",
-                        "Konnagar",
-                        "Hooghly",
-                        "West Bengal",
-                        "Station Road / Masterpara",
-                        22.7022,
-                        88.3482,
-                        "+91 98765 43211",
-                        "07:30 AM - 10:30 PM",
-                        true
-                );
-                p2 = pharmacyRepository.save(p2);
-
-                Optional<Doctor> docSubhashish = doctorRepository.findAll().stream().filter(d -> d.getUser().getEmail().equals("dr.subhashish@hospital.com")).findFirst();
-                Optional<Doctor> docDebolina = doctorRepository.findAll().stream().filter(d -> d.getUser().getEmail().equals("dr.debolina@hospital.com")).findFirst();
-                Optional<Doctor> docAnanya = doctorRepository.findAll().stream().filter(d -> d.getUser().getEmail().equals("dr.ananya@hospital.com")).findFirst();
-
-                if (docSubhashish.isPresent()) {
-                    pharmacyDoctorSlotRepository.save(new PharmacyDoctorSlot(p2, docSubhashish.get(), "Mon, Wed, Fri, Sat", "06:00 PM - 08:30 PM", "Chamber A", new BigDecimal("400.00"), 30));
-                }
-                if (docDebolina.isPresent()) {
-                    pharmacyDoctorSlotRepository.save(new PharmacyDoctorSlot(p2, docDebolina.get(), "Tue, Thu", "05:30 PM - 07:30 PM", "Chamber B", new BigDecimal("700.00"), 20));
-                }
-                if (docAnanya.isPresent()) {
-                    pharmacyDoctorSlotRepository.save(new PharmacyDoctorSlot(p2, docAnanya.get(), "Wednesday & Sunday", "11:00 AM - 01:00 PM", "Chamber A", new BigDecimal("600.00"), 15));
-                }
-            }
-        }
+        // 6. Seed Pharmacies and Visiting Doctor Chamber Time Slots across cities
+        seedPharmaciesAndChambers();
 
         logger.info("Hospital database synchronization, pharmacy chambers, and doctor credentials setup completed!");
     }
@@ -1495,6 +1425,250 @@ public class DataInitializer implements CommandLineRunner {
                     clinicAddress
             );
             doctorRepository.save(doc);
+    }
+
+    private void seedPharmaciesAndChambers() {
+        // 1. Uttarpara Pharmacies & Visiting Doctor Chambers
+        Pharmacy pMakhla = upsertPharmacy(
+                "Makhla Medicare Chemists & Polyclinic",
+                "WB-PHA-2024-8841",
+                "pharmacy@health.com",
+                "Near Makhla High School More, Station Road West, Uttarpara",
+                "Uttarpara",
+                "Hooghly",
+                "West Bengal",
+                "Makhla",
+                22.6735,
+                88.3345,
+                "+91 98311 55667",
+                "08:00 AM - 10:00 PM"
+        );
+        upsertSlot(pMakhla, "dr.mousumi@hospital.com", "Mon to Sat", "10:00 AM - 12:00 PM", "Chamber 2", new BigDecimal("450.00"), 25);
+        upsertSlot(pMakhla, "dr.rupa@hospital.com", "Tue, Thu, Sat", "12:00 PM - 01:30 PM", "Chamber 1", new BigDecimal("500.00"), 20);
+        upsertSlot(pMakhla, "dr.sharma@hospital.com", "Mon, Wed, Fri", "07:00 PM - 08:30 PM", "Chamber 1", new BigDecimal("750.00"), 20);
+        upsertSlot(pMakhla, "dr.sharmila@hospital.com", "Sunday", "10:00 AM - 12:30 PM", "Chamber 3", new BigDecimal("800.00"), 15);
+
+        Pharmacy pBhadrakali = upsertPharmacy(
+                "Bhadrakali Polyclinic & Medicine House",
+                "WB-PHA-2024-8842",
+                "bhadrakali.pharmacy@health.com",
+                "Near Bhadrakali Girls High School, GT Road, Uttarpara",
+                "Uttarpara",
+                "Hooghly",
+                "West Bengal",
+                "Bhadrakali",
+                22.6685,
+                88.3465,
+                "+91 98311 66778",
+                "08:30 AM - 09:30 PM"
+        );
+        upsertSlot(pBhadrakali, "dr.sayan@hospital.com", "Mon, Wed, Fri", "10:30 AM - 12:00 PM", "Chamber 1", new BigDecimal("650.00"), 20);
+        upsertSlot(pBhadrakali, "dr.sharma@hospital.com", "Tue, Thu, Sat", "12:00 PM - 01:30 PM", "Chamber 2", new BigDecimal("750.00"), 20);
+        upsertSlot(pBhadrakali, "dr.abhijit@hospital.com", "Mon, Wed, Fri", "07:00 PM - 08:30 PM", "Chamber 2", new BigDecimal("600.00"), 20);
+
+        Pharmacy pKotrung = upsertPharmacy(
+                "Kotrung Health Point & Pharmacy",
+                "WB-PHA-2024-8843",
+                "kotrung.pharmacy@health.com",
+                "Kotrung Ferry Ghat Road, Uttarpara",
+                "Uttarpara",
+                "Hooghly",
+                "West Bengal",
+                "Kotrung",
+                22.6825,
+                88.3495,
+                "+91 98311 77889",
+                "08:00 AM - 10:00 PM"
+        );
+        upsertSlot(pKotrung, "dr.mousumi@hospital.com", "Mon, Wed, Fri", "05:30 PM - 07:00 PM", "Chamber A", new BigDecimal("450.00"), 25);
+        upsertSlot(pKotrung, "dr.rupa@hospital.com", "Mon, Wed, Fri", "07:00 PM - 08:30 PM", "Chamber B", new BigDecimal("500.00"), 20);
+
+        Pharmacy pHindmotor = upsertPharmacy(
+                "Hindmotor Medical Chamber & Chemists",
+                "WB-PHA-2024-8844",
+                "hindmotor.pharmacy@health.com",
+                "Hindmotor Station Road, Near Overbridge, Uttarpara",
+                "Uttarpara",
+                "Hooghly",
+                "West Bengal",
+                "Hindmotor",
+                22.6890,
+                88.3420,
+                "+91 98311 88990",
+                "08:00 AM - 09:30 PM"
+        );
+        upsertSlot(pHindmotor, "dr.sayan@hospital.com", "Tue, Thu, Sat", "06:30 PM - 08:00 PM", "Chamber 1", new BigDecimal("650.00"), 20);
+        upsertSlot(pHindmotor, "dr.abhijit@hospital.com", "Sunday", "11:00 AM - 01:00 PM", "Chamber 2", new BigDecimal("600.00"), 15);
+
+        Pharmacy pJaykrishna = upsertPharmacy(
+                "Jaykrishna Memorial Chamber & Pharmacy",
+                "WB-PHA-2024-8845",
+                "jaykrishna.pharmacy@health.com",
+                "GT Road near Jaykrishna Public Library, Uttarpara",
+                "Uttarpara",
+                "Hooghly",
+                "West Bengal",
+                "Uttarpara GT Road",
+                22.6715,
+                88.3525,
+                "+91 98311 99001",
+                "08:30 AM - 10:00 PM"
+        );
+        upsertSlot(pJaykrishna, "dr.sharmila@hospital.com", "Sat, Sun", "06:00 PM - 08:00 PM", "Chamber 1", new BigDecimal("800.00"), 15);
+
+        // 2. Konnagar Chambers
+        Pharmacy pKonnagar = upsertPharmacy(
+                "Bengal Swasthya Chemists & Doctor Chamber",
+                "WB-PHA-2024-9102",
+                "staff@hospital.com",
+                "Konnagar Station Road East, Near Bus Stand",
+                "Konnagar",
+                "Hooghly",
+                "West Bengal",
+                "Station Road / Masterpara",
+                22.7022,
+                88.3482,
+                "+91 98765 43211",
+                "07:30 AM - 10:30 PM"
+        );
+        upsertSlot(pKonnagar, "dr.subhashish@hospital.com", "Mon, Wed, Fri, Sat", "06:00 PM - 08:30 PM", "Chamber A", new BigDecimal("400.00"), 30);
+        upsertSlot(pKonnagar, "dr.debolina@hospital.com", "Tue, Thu", "05:30 PM - 07:30 PM", "Chamber B", new BigDecimal("700.00"), 20);
+        upsertSlot(pKonnagar, "dr.ananya@hospital.com", "Wednesday & Sunday", "11:00 AM - 01:00 PM", "Chamber A", new BigDecimal("600.00"), 15);
+
+        // 3. Howrah Chambers
+        Pharmacy pHowrah = upsertPharmacy(
+                "Shibpur Sanjeevani Pharmacy & Chambers",
+                "WB-PHA-2024-9201",
+                "howrah.pharmacy@health.com",
+                "Near Mandirtala Bus Terminus, Shibpur, Howrah",
+                "Howrah",
+                "Howrah",
+                "West Bengal",
+                "Shibpur Mandirtala",
+                22.5715,
+                88.3245,
+                "+91 98300 11223",
+                "08:00 AM - 10:30 PM"
+        );
+        upsertSlot(pHowrah, "dr.anupam@hospital.com", "Mon, Wed, Fri", "06:00 PM - 08:00 PM", "Chamber 1", new BigDecimal("750.00"), 20);
+        upsertSlot(pHowrah, "dr.sharmistha@hospital.com", "Tue, Thu, Sat", "11:00 AM - 01:00 PM", "Chamber 2", new BigDecimal("450.00"), 25);
+
+        // 4. Kolkata Chambers
+        Pharmacy pKolkata = upsertPharmacy(
+                "Apollo Pharmacy & Visiting Chamber - Salt Lake",
+                "WB-PHA-2024-9301",
+                "kolkata.pharmacy@health.com",
+                "Sector 1, Salt Lake City, Kolkata",
+                "Kolkata",
+                "Kolkata",
+                "West Bengal",
+                "Salt Lake Sector 1",
+                22.5867,
+                88.4178,
+                "+91 98301 22334",
+                "08:00 AM - 10:00 PM"
+        );
+        upsertSlot(pKolkata, "dr.anupam@hospital.com", "Tue, Thu", "06:30 PM - 08:00 PM", "Chamber 1", new BigDecimal("800.00"), 20);
+        upsertSlot(pKolkata, "dr.sharmistha@hospital.com", "Wed, Fri", "04:30 PM - 06:30 PM", "Chamber 2", new BigDecimal("500.00"), 20);
+
+        // 5. Bengaluru Chambers
+        upsertPharmacy(
+                "MedPlus Pharmacy & Specialist Chamber - Indiranagar",
+                "KA-PHA-2024-9401",
+                "bengaluru.pharmacy@health.com",
+                "100 Feet Road, HAL 2nd Stage, Indiranagar, Bengaluru",
+                "Bengaluru",
+                "Bengaluru Urban",
+                "Karnataka",
+                "Indiranagar",
+                12.9716,
+                77.6412,
+                "+91 98800 33445",
+                "08:00 AM - 10:30 PM"
+        );
+
+        upsertPharmacy(
+                "Apollo Pharmacy & Wellness Chamber - Koramangala",
+                "KA-PHA-2024-9402",
+                "koramangala.pharmacy@health.com",
+                "Koramangala 4th Block, 80 Feet Road, Bengaluru",
+                "Bengaluru",
+                "Bengaluru Urban",
+                "Karnataka",
+                "Koramangala",
+                12.9352,
+                77.6245,
+                "+91 98800 55667",
+                "08:00 AM - 11:00 PM"
+        );
+
+        // Seed a sample chamber appointment for patient1 at Makhla Medicare if none exists for that pharmacy
+        User patient1 = userRepository.findByEmail("patient@health.com").orElse(null);
+        Optional<Doctor> docSharma = doctorRepository.findAll().stream()
+                .filter(d -> d.getUser() != null && "dr.sharma@hospital.com".equals(d.getUser().getEmail()))
+                .findFirst();
+
+        if (patient1 != null && docSharma.isPresent() && appointmentRepository.findByPharmacyIdOrderBySlotDatetimeDesc(pMakhla.getId()).isEmpty()) {
+            Appointment appt = new Appointment(
+                    patient1,
+                    docSharma.get(),
+                    LocalDateTime.now().plusDays(1).withHour(19).withMinute(0),
+                    AppointmentStatus.CONFIRMED,
+                    null
+            );
+            appt.setPharmacy(pMakhla);
+            appt.setChamberName("Makhla Medicare Chemists & Polyclinic (Chamber 1)");
+            appt.setPatientExitMarked(false);
+            appointmentRepository.save(appt);
+        }
+    }
+
+    private Pharmacy upsertPharmacy(String pharmacyName, String license, String email, String address,
+                                    String city, String district, String state, String locality,
+                                    Double lat, Double lon, String phone, String operatingHours) {
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            User newUser = new User(
+                    pharmacyName,
+                    email,
+                    passwordEncoder.encode("pharmacy123"),
+                    Role.ROLE_PHARMACIST_RECEPTIONIST,
+                    phone
+            );
+            newUser.setAddress(address);
+            newUser.setIsApproved(true);
+            return userRepository.save(newUser);
+        });
+
+        return pharmacyRepository.findByUserId(user.getId()).orElseGet(() -> {
+            Pharmacy p = new Pharmacy(
+                    pharmacyName,
+                    license,
+                    user,
+                    address,
+                    city,
+                    district,
+                    state,
+                    locality,
+                    lat,
+                    lon,
+                    phone,
+                    operatingHours,
+                    true
+            );
+            return pharmacyRepository.save(p);
+        });
+    }
+
+    private void upsertSlot(Pharmacy pharmacy, String doctorEmail, String days, String timeSlot, String chamberRoom, BigDecimal fee, Integer maxTokens) {
+        Doctor doctor = doctorRepository.findAll().stream()
+                .filter(d -> d.getUser() != null && doctorEmail.equalsIgnoreCase(d.getUser().getEmail()))
+                .findFirst().orElse(null);
+        if (doctor != null && pharmacy != null) {
+            List<PharmacyDoctorSlot> existing = pharmacyDoctorSlotRepository.findByPharmacyIdAndDoctorId(pharmacy.getId(), doctor.getId());
+            boolean match = existing.stream().anyMatch(s -> s.getTimeSlot().equalsIgnoreCase(timeSlot));
+            if (!match && existing.size() < 2) {
+                pharmacyDoctorSlotRepository.save(new PharmacyDoctorSlot(pharmacy, doctor, days, timeSlot, chamberRoom, fee, maxTokens));
+            }
         }
     }
 }

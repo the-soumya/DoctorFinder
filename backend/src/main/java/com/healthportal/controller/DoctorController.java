@@ -75,4 +75,21 @@ public class DoctorController {
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         return ResponseEntity.ok(doctorService.updateDoctorProfile(id, dto, userDetails.getId()));
     }
+
+    @PostMapping("/{id}/photo")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('DOCTOR')")
+    @Operation(summary = "Upload and update doctor profile photo")
+    public ResponseEntity<Map<String, Object>> uploadDoctorPhoto(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> payload,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        String photo = payload.get("photoUrl");
+        DoctorDto dto = new DoctorDto();
+        dto.setPhotoUrl(photo);
+        doctorService.updateDoctorProfile(id, dto, userDetails.getId());
+        Map<String, Object> resp = new java.util.HashMap<>();
+        resp.put("success", true);
+        resp.put("photoUrl", photo);
+        return ResponseEntity.ok(resp);
+    }
 }

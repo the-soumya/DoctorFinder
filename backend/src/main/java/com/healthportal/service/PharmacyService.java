@@ -62,6 +62,13 @@ public class PharmacyService {
         Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
 
+        long existingDoctorSlots = slotRepository.findByPharmacyId(pharmacyId).stream()
+                .filter(s -> s.getDoctor().getId().equals(doctorId))
+                .count();
+        if (existingDoctorSlots >= 2) {
+            throw new com.healthportal.exception.BadRequestException("Doctor already has the maximum of 2 visiting time slots in this chamber.");
+        }
+
         PharmacyDoctorSlot slot = new PharmacyDoctorSlot(pharmacy, doctor, days, timeSlot, room, fee, maxTokens);
         slotRepository.save(slot);
         return mapToDetails(pharmacy);
@@ -70,6 +77,30 @@ public class PharmacyService {
     @Transactional
     public void removeDoctorSlot(Long slotId) {
         slotRepository.deleteById(slotId);
+    }
+
+    public List<Map<String, Object>> getChambersByDoctorId(Long doctorId) {
+        List<PharmacyDoctorSlot> slots = slotRepository.findAll().stream()
+                .filter(s -> s.getDoctor().getId().equals(doctorId))
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (PharmacyDoctorSlot s : slots) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("slotId", s.getId());
+            map.put("pharmacyId", s.getPharmacy().getId());
+            map.put("pharmacyName", s.getPharmacy().getName());
+            map.put("address", s.getPharmacy().getAddress());
+            map.put("city", s.getPharmacy().getCity());
+            map.put("locality", s.getPharmacy().getLocality());
+            map.put("availableDays", s.getAvailableDays());
+            map.put("timeSlot", s.getTimeSlot());
+            map.put("chamberRoom", s.getChamberRoom());
+            map.put("consultationFee", s.getConsultationFee());
+            map.put("maxTokens", s.getMaxTokens());
+            result.add(map);
+        }
+        return result;
     }
 
     private Map<String, Object> mapToDetails(Pharmacy p) {
