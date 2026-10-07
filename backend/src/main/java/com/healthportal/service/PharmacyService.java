@@ -139,6 +139,7 @@ public class PharmacyService {
         }).collect(Collectors.toList());
 
         res.put("visitingDoctors", visitingDoctors);
+        res.put("slots", visitingDoctors);
         return res;
     }
 }

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import SlotBookingModal from '../components/SlotBookingModal';
+import { DEFAULT_REAL_CHAMBERS, DEFAULT_REAL_DOCTORS, normalizeChamber } from '../data/chambersData';
 import { 
   Heart, 
   MapPin, 
@@ -21,17 +22,20 @@ import {
   Filter,
   CheckCircle2,
   Phone,
-  Sparkles
+  Sparkles,
+  RotateCcw
 } from 'lucide-react';
 import { formatDoctorName, formatCurrency } from '../utils/formatters';
 
 export default function Home() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [allDoctors, setAllDoctors] = useState([]);
-  const [pharmacies, setPharmacies] = useState([]);
+  const [allDoctors, setAllDoctors] = useState(DEFAULT_REAL_DOCTORS);
+  const [pharmacies, setPharmacies] = useState(DEFAULT_REAL_CHAMBERS.map(normalizeChamber));
   const [loading, setLoading] = useState(true);
   const [selectedCity, setSelectedCity] = useState('All');
+  const [selectedChamberName, setSelectedChamberName] = useState('All');
+  const [chamberSearch, setChamberSearch] = useState('');
   const [doctorSearch, setDoctorSearch] = useState('');
   const [bookingDoctor, setBookingDoctor] = useState(null);
 
@@ -48,21 +52,37 @@ export default function Home() {
     setBookingDoctor(doc);
   };
 
-  const handleBookChamber = (pharmacy) => {
-    if (!user) {
-      navigate('/login', {
-        state: {
-          returnUrl: '/',
-          message: `Please sign in or create an account to book an appointment at ${pharmacy?.name || 'this chamber'}.`
-        }
-      });
-      return;
+  const handleBookSlotForDoctor = (pharmacy, slot) => {
+    let docObj = allDoctors.find(d => d.id === slot.doctorId);
+    if (!docObj) {
+      docObj = {
+        id: slot.doctorId,
+        name: slot.doctorName,
+        specialization: slot.specialization || slot.doctorSpecialization || 'Specialist',
+        degree: slot.degree || 'MBBS, MD',
+        photoUrl: slot.photoUrl || slot.doctorPhotoUrl,
+        consultationFee: slot.consultationFee,
+        city: pharmacy.city,
+        locality: pharmacy.locality,
+        clinicAddress: `${pharmacy.name}, ${pharmacy.address}`
+      };
     }
-    if (pharmacy.slots && pharmacy.slots.length > 0) {
-      const firstDocId = pharmacy.slots[0].doctorId;
-      const docObj = allDoctors.find(d => d.id === firstDocId);
-      if (docObj) {
-        setBookingDoctor(docObj);
+    handleBookDoctor(docObj);
+  };
+
+  const handleBookChamber = (pharmacy) => {
+    const slots = pharmacy.slots || pharmacy.visitingDoctors || [];
+    if (slots.length > 0) {
+      handleBookSlotForDoctor(pharmacy, slots[0]);
+    } else {
+      if (!user) {
+        navigate('/login', {
+          state: {
+            returnUrl: '/',
+            message: `Please sign in or create an account to book an appointment at ${pharmacy?.name || 'this chamber'}.`
+          }
+        });
+        return;
       }
     }
   };
@@ -74,11 +94,14 @@ export default function Home() {
       api.get('/pharmacies').catch(() => ({ data: [] }))
     ]).then(([docRes, pharmRes]) => {
       if (isMounted) {
-        if (Array.isArray(docRes.data)) {
+        if (Array.isArray(docRes.data) && docRes.data.length > 0) {
           setAllDoctors(docRes.data);
         }
-        if (Array.isArray(pharmRes.data)) {
-          setPharmacies(pharmRes.data.filter(p => p.isApproved));
+        if (Array.isArray(pharmRes.data) && pharmRes.data.length > 0) {
+          const approved = pharmRes.data.filter(p => p.isApproved !== false).map(normalizeChamber);
+          if (approved.length > 0) {
+            setPharmacies(approved);
+          }
         }
       }
     }).finally(() => {
@@ -88,13 +111,22 @@ export default function Home() {
     return () => { isMounted = false; };
   }, []);
 
-  // Filtered pharmacies by city
+  // Filtered pharmacies by city, chamber name, and search
   const filteredPharmacies = pharmacies.filter(p => {
-    if (selectedCity === 'All') return true;
-    return p.city && p.city.toLowerCase() === selectedCity.toLowerCase();
+    const matchesCity = selectedCity === 'All' || (p.city && p.city.toLowerCase() === selectedCity.toLowerCase());
+    const matchesChamber = selectedChamberName === 'All' || 
+      p.name === selectedChamberName || 
+      p.shortName === selectedChamberName ||
+      (selectedChamberName && p.name.toLowerCase().includes(selectedChamberName.toLowerCase()));
+    const matchesSearch = !chamberSearch || 
+      p.name.toLowerCase().includes(chamberSearch.toLowerCase()) ||
+      (p.locality && p.locality.toLowerCase().includes(chamberSearch.toLowerCase())) ||
+      (p.address && p.address.toLowerCase().includes(chamberSearch.toLowerCase())) ||
+      (p.shortName && p.shortName.toLowerCase().includes(chamberSearch.toLowerCase()));
+    return matchesCity && matchesChamber && matchesSearch;
   });
 
-  // Filtered doctors by search and city
+  // Filtered doctors by search, city, and selected chamber
   const filteredDoctors = allDoctors.filter(d => {
     const matchesCity = selectedCity === 'All' || (d.city && d.city.toLowerCase() === selectedCity.toLowerCase());
     const matchesSearch = !doctorSearch || 
@@ -102,7 +134,17 @@ export default function Home() {
       (d.specialization && d.specialization.toLowerCase().includes(doctorSearch.toLowerCase())) ||
       (d.locality && d.locality.toLowerCase().includes(doctorSearch.toLowerCase())) ||
       (d.departmentName && d.departmentName.toLowerCase().includes(doctorSearch.toLowerCase()));
-    return matchesCity && matchesSearch;
+    
+    // If a chamber is selected, filter doctors who sit at this chamber
+    let matchesChamber = true;
+    if (selectedChamberName !== 'All') {
+      const activePharm = pharmacies.find(p => p.name === selectedChamberName || p.shortName === selectedChamberName);
+      if (activePharm && activePharm.slots && activePharm.slots.length > 0) {
+        matchesChamber = activePharm.slots.some(s => s.doctorId === d.id);
+      }
+    }
+
+    return matchesCity && matchesSearch && matchesChamber;
   });
 
   const cities = ['All', 'Uttarpara', 'Konnagar', 'Howrah', 'Kolkata', 'Bengaluru'];
@@ -204,6 +246,63 @@ export default function Home() {
             </>
           )}
         </div>
+
+        {/* HERO QUICK SELECTION BY CHAMBER NAME */}
+        <div style={{
+          marginTop: '2.25rem',
+          padding: '1.25rem',
+          background: 'var(--bg-elevated)',
+          border: '2px solid var(--border-medium)',
+          borderRadius: 'var(--radius-xl)',
+          boxShadow: 'var(--shadow-md)',
+          textAlign: 'left'
+        }} id="hero-chamber-selector-box">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 800, fontSize: '0.95rem' }}>
+              <Building2 size={20} />
+              <span>Select Visiting Doctor Chamber:</span>
+            </div>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Fixed sitting times: 10 AM, 12 PM, 7 PM
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 320px', position: 'relative' }}>
+              <select
+                id="hero-chamber-select"
+                className="form-select"
+                value={selectedChamberName}
+                onChange={(e) => {
+                  setSelectedChamberName(e.target.value);
+                  const el = document.getElementById('chambers-section');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                style={{ fontWeight: 700, padding: '10px 14px' }}
+              >
+                <option value="All">🏢 All Chambers Across Cities ({pharmacies.length} Available)</option>
+                {pharmacies.map(ch => (
+                  <option key={ch.id} value={ch.name}>
+                    {ch.shortName || ch.name} &bull; {ch.locality || ch.city} ({ch.city})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <a
+              href="#chambers-section"
+              className="btn btn-primary"
+              style={{ padding: '10px 20px', whiteSpace: 'nowrap' }}
+              onClick={() => {
+                const el = document.getElementById('chambers-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              <span>View Chamber Sittings</span>
+              <ArrowRight size={16} />
+            </a>
+          </div>
+        </div>
       </div>
 
       {/* CITY SELECTION FILTER BAR */}
@@ -225,7 +324,10 @@ export default function Home() {
         {cities.map(city => (
           <button
             key={city}
-            onClick={() => setSelectedCity(city)}
+            onClick={() => {
+              setSelectedCity(city);
+              setSelectedChamberName('All');
+            }}
             style={{
               padding: '6px 16px',
               borderRadius: 'var(--radius-full)',
@@ -255,120 +357,280 @@ export default function Home() {
               Doctors by Chamber Names & Sittings
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-              Each pharmacy chamber hosts multiple specialist doctors at specific sitting times (e.g. 10 AM, 12 PM, 7 PM). Book according to your chamber and time preference.
+              In Uttarpara and surrounding cities, specialist doctors sit at local pharmacies (e.g. <strong>Makhla Medicare</strong>, <strong>Bhadrakali Polyclinic</strong>, <strong>Kotrung Health Point</strong>) at designated hours (e.g. 10 AM, 12 PM, 7 PM). Choose your doctor according to their sitting schedule.
             </p>
           </div>
-          <span className="badge badge-confirmed" style={{ fontSize: '0.85rem' }}>
-            {filteredPharmacies.length} Active Chambers Found
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span className="badge badge-confirmed" style={{ fontSize: '0.85rem' }}>
+              {filteredPharmacies.length} Active Chambers Found
+            </span>
+            {(selectedChamberName !== 'All' || chamberSearch) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedChamberName('All');
+                  setChamberSearch('');
+                }}
+                className="btn btn-secondary btn-xs"
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                title="Reset Chamber Filters"
+              >
+                <RotateCcw size={12} />
+                <span>Show All</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' }}>
-          {filteredPharmacies.map(pharmacy => (
-            <div key={pharmacy.id} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
-                      {pharmacy.name}
-                    </h3>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 700, marginTop: '2px' }}>
-                      📍 {pharmacy.locality || pharmacy.city} &bull; {pharmacy.city}
-                    </div>
-                  </div>
-                  <span style={{
-                    padding: '4px 10px',
-                    borderRadius: 'var(--radius-full)',
-                    background: 'var(--secondary-subtle)',
-                    color: 'var(--secondary)',
-                    fontSize: '0.75rem',
-                    fontWeight: 700
-                  }}>
-                    {pharmacy.operatingHours || '08:00 AM - 10:00 PM'}
-                  </span>
-                </div>
+        {/* SELECTION BY CHAMBER NAME CONTROLS CARD */}
+        <div className="card" style={{ padding: '1.25rem', marginBottom: '1.75rem', background: 'var(--bg-elevated)', border: '1px solid var(--border-medium)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', alignItems: 'flex-end', marginBottom: '1rem' }}>
+            
+            {/* Chamber Name Dropdown Selector */}
+            <div>
+              <label htmlFor="chamber-name-select" className="form-label" style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Building2 size={14} color="var(--primary)" />
+                <strong>Selection by Chamber Name:</strong>
+              </label>
+              <select
+                id="chamber-name-select"
+                className="form-select"
+                value={selectedChamberName}
+                onChange={(e) => setSelectedChamberName(e.target.value)}
+                style={{ fontWeight: 700 }}
+              >
+                <option value="All">🏢 All Chambers ({pharmacies.length} Chambers)</option>
+                {pharmacies.map(ch => (
+                  <option key={ch.id} value={ch.name}>
+                    {ch.shortName || ch.name} &bull; {ch.locality || ch.city} ({ch.city})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.4 }}>
-                  {pharmacy.address}
-                </p>
-
-                {/* Visiting Doctors Schedule List */}
-                <div style={{
-                  background: 'var(--bg-elevated)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '12px',
-                  border: '1px solid var(--border-subtle)',
-                  marginBottom: '1rem'
-                }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                    Visiting Doctors & Sittings:
-                  </div>
-
-                  {pharmacy.slots && pharmacy.slots.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {pharmacy.slots.map(slot => (
-                        <div key={slot.id} style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '8px 10px',
-                          background: 'var(--bg-surface)',
-                          borderRadius: 'var(--radius-sm)',
-                          border: '1px solid var(--border-subtle)'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <img
-                              src={slot.doctorPhotoUrl || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400'}
-                              alt={slot.doctorName}
-                              style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
-                            />
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: '0.85rem' }}>
-                                {formatDoctorName(slot.doctorName)}
-                              </div>
-                              <div style={{ fontSize: '0.725rem', color: 'var(--secondary)', fontWeight: 600 }}>
-                                {slot.doctorSpecialization}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)' }}>
-                              ⏰ {slot.timeSlot}
-                            </div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                              {slot.availableDays} &bull; ₹{slot.consultationFee}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                      Consultation slots open daily. Walk-in and advance booking accepted.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)' }}>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Phone size={14} />
-                  <span>{pharmacy.phone}</span>
-                </div>
-
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  onClick={() => handleBookChamber(pharmacy)}
-                >
-                  <Calendar size={14} />
-                  <span>Book at this Chamber</span>
-                </button>
+            {/* Chamber Text Search */}
+            <div>
+              <label htmlFor="chamber-search-input" className="form-label" style={{ fontSize: '0.78rem', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Search size={14} color="var(--primary)" />
+                <strong>Search Chamber Name or Street:</strong>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Search size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  id="chamber-search-input"
+                  className="form-input"
+                  value={chamberSearch}
+                  onChange={(e) => setChamberSearch(e.target.value)}
+                  placeholder="e.g. Makhla, Bhadrakali, Kotrung, Hindmotor, Jaykrishna..."
+                  style={{ paddingLeft: '36px' }}
+                />
               </div>
             </div>
-          ))}
+          </div>
+
+          {/* Quick Select Chamber Pills */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', paddingTop: '10px', borderTop: '1px dashed var(--border-subtle)' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginRight: '4px' }}>
+              Quick Select Chamber:
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedChamberName('All')}
+              className={`btn btn-xs ${selectedChamberName === 'All' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ borderRadius: '14px', fontSize: '0.76rem', padding: '3px 10px' }}
+              id="pill-chamber-all"
+            >
+              All Chambers ({pharmacies.length})
+            </button>
+            {pharmacies.map(ch => {
+              const label = ch.shortName || ch.name;
+              const isSelected = selectedChamberName === ch.name || selectedChamberName === ch.shortName;
+              return (
+                <button
+                  key={ch.id}
+                  type="button"
+                  onClick={() => setSelectedChamberName(ch.name)}
+                  className={`btn btn-xs ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ borderRadius: '14px', fontSize: '0.76rem', padding: '3px 10px' }}
+                  id={`pill-chamber-${ch.id}`}
+                >
+                  🏥 {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {/* Chambers Grid */}
+        {filteredPharmacies.length > 0 ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem' }}>
+            {filteredPharmacies.map(pharmacy => {
+              const slots = pharmacy.slots || pharmacy.visitingDoctors || [];
+              return (
+                <div key={pharmacy.id} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: selectedChamberName === pharmacy.name ? '2px solid var(--primary)' : '1px solid var(--border-subtle)' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                      <div>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                          {pharmacy.name}
+                        </h3>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 700, marginTop: '2px' }}>
+                          📍 {pharmacy.locality || pharmacy.city} &bull; {pharmacy.city}
+                        </div>
+                      </div>
+                      <span style={{
+                        padding: '4px 10px',
+                        borderRadius: 'var(--radius-full)',
+                        background: 'var(--secondary-subtle)',
+                        color: 'var(--secondary)',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {pharmacy.operatingHours || '08:00 AM - 10:00 PM'}
+                      </span>
+                    </div>
+
+                    <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.4 }}>
+                      {pharmacy.address}
+                    </p>
+
+                    {/* Visiting Doctors Schedule List */}
+                    <div style={{
+                      background: 'var(--bg-elevated)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '12px',
+                      border: '1px solid var(--border-subtle)',
+                      marginBottom: '1rem'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                          Visiting Doctors & Sittings ({slots.length}):
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 700 }}>
+                          Max 2 Slots / Doctor
+                        </span>
+                      </div>
+
+                      {slots.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {slots.map((slot, sIdx) => {
+                            const dName = slot.doctorName || slot.name || 'Consultant Specialist';
+                            const dSpec = slot.specialization || slot.doctorSpecialization || 'Specialist';
+                            const dDegree = slot.degree || 'MBBS, MD';
+                            const dPhoto = slot.photoUrl || slot.doctorPhotoUrl || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400';
+                            const dRoom = slot.chamberRoom || `Chamber ${sIdx + 1}`;
+                            const dFee = formatCurrency(slot.consultationFee);
+
+                            return (
+                              <div key={slot.id || slot.slotId || sIdx} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '10px 12px',
+                                background: 'var(--bg-surface)',
+                                borderRadius: 'var(--radius-md)',
+                                border: '1px solid var(--border-subtle)',
+                                gap: '8px',
+                                flexWrap: 'wrap'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '180px', flex: 1 }}>
+                                  <img
+                                    src={dPhoto}
+                                    alt={dName}
+                                    style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--primary-subtle)' }}
+                                    onError={(e) => {
+                                      e.target.src = 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400';
+                                    }}
+                                  />
+                                  <div>
+                                    <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)' }}>
+                                      {formatDoctorName(dName)}
+                                    </div>
+                                    <div style={{ fontSize: '0.725rem', color: 'var(--secondary)', fontWeight: 600 }}>
+                                      {dSpec}
+                                    </div>
+                                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                                      {dDegree} &bull; {dRoom}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <div style={{ textAlign: 'right' }}>
+                                    <div style={{ fontSize: '0.825rem', fontWeight: 800, color: 'var(--primary)' }}>
+                                      ⏰ {slot.timeSlot}
+                                    </div>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                      {slot.availableDays} &bull; {dFee}
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleBookSlotForDoctor(pharmacy, slot)}
+                                    className="btn btn-primary btn-xs"
+                                    style={{ padding: '6px 10px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                    id={`btn-book-slot-${pharmacy.id}-${slot.doctorId || sIdx}`}
+                                  >
+                                    <Calendar size={13} />
+                                    <span>Book Slot</span>
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '8px 0' }}>
+                          Consultation slots open daily. Walk-in and advance booking accepted at desk.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Phone size={14} />
+                      <span>{pharmacy.phone}</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => handleBookChamber(pharmacy)}
+                    >
+                      <Calendar size={14} />
+                      <span>Book at this Chamber</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="card" style={{ padding: '2.5rem', textAlign: 'center', background: 'var(--bg-elevated)' }}>
+            <Building2 size={36} color="var(--text-muted)" style={{ margin: '0 auto 10px' }} />
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '6px' }}>
+              No chambers match "{chamberSearch || selectedChamberName}"
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
+              Try selecting a different city or clearing your search term to see all available chambers.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedCity('All');
+                setSelectedChamberName('All');
+                setChamberSearch('');
+              }}
+              className="btn btn-primary btn-sm"
+            >
+              Reset Filters & Show All Chambers
+            </button>
+          </div>
+        )}
       </section>
 
       {/* SECTION 2: DOCTORS NEAR YOU BY LOCATION */}
@@ -435,11 +697,47 @@ export default function Home() {
                   borderRadius: 'var(--radius-sm)',
                   fontSize: '0.8rem',
                   color: 'var(--text-secondary)',
-                  marginBottom: '1rem'
+                  marginBottom: '0.75rem'
                 }}>
                   <MapPin size={14} color="var(--primary)" />
                   <span>{doc.locality ? `${doc.locality}, ${doc.city}` : (doc.city || 'Central Clinic')}</span>
                 </div>
+
+                {/* Visiting Chamber & Sitting Badge */}
+                {(() => {
+                  const docChambers = pharmacies.filter(p => {
+                    const slots = p.slots || p.visitingDoctors || [];
+                    return slots.some(s => s.doctorId === doc.id) ||
+                      (doc.clinicAddress && doc.clinicAddress.toLowerCase().includes((p.shortName || p.name).toLowerCase()));
+                  });
+                  if (docChambers.length === 0) return null;
+                  return (
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      marginBottom: '1rem',
+                      background: 'var(--primary-subtle)',
+                      padding: '6px 10px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-subtle)'
+                    }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Building2 size={12} /> Visiting Chambers & Sitting:
+                      </span>
+                      {docChambers.map(ch => {
+                        const slots = ch.slots || ch.visitingDoctors || [];
+                        const s = slots.find(slot => slot.doctorId === doc.id);
+                        return (
+                          <div key={ch.id || ch.name} style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>🏥 {ch.shortName || ch.name}</span>
+                            {s?.timeSlot && <span style={{ color: 'var(--primary)', fontWeight: 700 }}>⏰ {s.timeSlot}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div>
@@ -538,9 +836,43 @@ export default function Home() {
                   {doc.bio ? (doc.bio.length > 85 ? doc.bio.substring(0, 85) + '...' : doc.bio) : 'Consultant specialist available for chamber and clinic consultation.'}
                 </p>
 
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
                   📍 {doc.locality || doc.city || 'Central Clinic'}
                 </div>
+
+                {/* Visiting Chamber Badge */}
+                {(() => {
+                  const docChambers = pharmacies.filter(p => {
+                    const slots = p.slots || p.visitingDoctors || [];
+                    return slots.some(s => s.doctorId === doc.id) ||
+                      (doc.clinicAddress && doc.clinicAddress.toLowerCase().includes((p.shortName || p.name).toLowerCase()));
+                  });
+                  if (docChambers.length === 0) return null;
+                  return (
+                    <div style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '4px',
+                      marginBottom: '0.75rem'
+                    }}>
+                      {docChambers.map(ch => (
+                        <span
+                          key={ch.id || ch.name}
+                          style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            background: 'var(--primary-subtle)',
+                            color: 'var(--primary)',
+                            padding: '2px 6px',
+                            borderRadius: '4px'
+                          }}
+                        >
+                          🏥 {ch.shortName || ch.name}
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div>

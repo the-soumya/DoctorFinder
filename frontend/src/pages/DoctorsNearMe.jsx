@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import SlotBookingModal from '../components/SlotBookingModal';
+import { DEFAULT_REAL_CHAMBERS, DEFAULT_REAL_DOCTORS, normalizeChamber } from '../data/chambersData';
 import L from 'leaflet';
 import { 
   MapPin, 
@@ -18,7 +19,9 @@ import {
   Compass,
   X,
   ExternalLink,
-  Home
+  Home,
+  Building2,
+  RotateCcw
 } from 'lucide-react';
 import { formatDoctorName, formatCurrency } from '../utils/formatters';
 
@@ -61,7 +64,15 @@ export default function DoctorsNearMe() {
     lon: 88.3360
   });
 
-  const [doctors, setDoctors] = useState([]);
+  const [doctors, setDoctors] = useState(() => {
+    return DEFAULT_REAL_DOCTORS.map(doc => {
+      const dist = calculateHaversineDistance(22.6740, 88.3360, doc.latitude, doc.longitude);
+      return {
+        ...doc,
+        calculatedDistance: dist
+      };
+    });
+  });
   const [departments, setDepartments] = useState([]);
   const [locating, setLocating] = useState(false);
 
@@ -75,6 +86,10 @@ export default function DoctorsNearMe() {
   const [selectedLocality, setSelectedLocality] = useState('');
   const [locationsData, setLocationsData] = useState({ states: [], districts: [], cities: [], cityToLocalities: {}, hierarchy: {} });
 
+  // Chamber selection state & real-world fallback
+  const [chambersList, setChambersList] = useState(DEFAULT_REAL_CHAMBERS.map(normalizeChamber));
+  const [selectedChamber, setSelectedChamber] = useState('');
+
   // Navigation & Direction State
   const [activeRouteDoctor, setActiveRouteDoctor] = useState(null);
   const [selectedDoctorForBooking, setSelectedDoctorForBooking] = useState(null);
@@ -86,10 +101,13 @@ export default function DoctorsNearMe() {
   const routePolylineRef = useRef(null);
   const [roadRouteInfo, setRoadRouteInfo] = useState(null); // { distance, duration, geometry }
 
-  // Read pre-selected specialty from AI Screener navigation state if present
+  // Read pre-selected specialty or chamber from navigation state if present
   useEffect(() => {
     if (location.state?.recommendedSpecialist) {
       setSpecialty(location.state.recommendedSpecialist);
+    }
+    if (location.state?.selectedChamber) {
+      setSelectedChamber(location.state.selectedChamber);
     }
   }, [location.state]);
 
@@ -102,6 +120,15 @@ export default function DoctorsNearMe() {
     api.get('/doctors/locations')
       .then(res => setLocationsData(res.data))
       .catch(err => console.error('Failed to load locations', err));
+
+    api.get('/pharmacies')
+      .then(res => {
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          const approved = res.data.filter(p => p.isApproved !== false).map(normalizeChamber);
+          if (approved.length > 0) setChambersList(approved);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Update home address if user logs in
@@ -113,6 +140,28 @@ export default function DoctorsNearMe() {
       }));
     }
   }, [user]);
+
+  // Handle Chamber Selection
+  const handleChamberChange = (chamberName) => {
+    setSelectedChamber(chamberName);
+    if (chamberName) {
+      const ch = chambersList.find(c => c.name === chamberName || c.shortName === chamberName);
+      if (ch && ch.latitude && ch.longitude && leafletMap.current) {
+        leafletMap.current.setView([ch.latitude, ch.longitude], 15);
+      }
+    }
+  };
+
+  // Doctors filtered by both geo criteria AND selected chamber
+  const displayedDoctors = doctors.filter(doc => {
+    if (!selectedChamber) return true;
+    const ch = chambersList.find(c => c.name === selectedChamber || c.shortName === selectedChamber);
+    if (!ch) return true;
+    const slots = ch.slots || ch.visitingDoctors || [];
+    const sitsHere = slots.some(s => s.doctorId === doc.id);
+    const addressMatch = doc.clinicAddress && doc.clinicAddress.toLowerCase().includes((ch.shortName || ch.name).toLowerCase());
+    return sitsHere || addressMatch;
+  });
 
   // Fetch doctors whenever filters change
   useEffect(() => {
@@ -235,6 +284,7 @@ export default function DoctorsNearMe() {
     setSelectedDistrict('');
     setSelectedCity('');
     setSelectedLocality('');
+    setSelectedChamber('');
     setActiveRouteDoctor(null);
   };
 
@@ -329,7 +379,7 @@ export default function DoctorsNearMe() {
     markersRef.current.push(userMarker);
 
     // Doctor clinic markers
-    doctors.forEach(doc => {
+    displayedDoctors.forEach(doc => {
       const isRouteDestination = activeRouteDoctor && activeRouteDoctor.id === doc.id;
 
       const doctorIcon = L.divIcon({
@@ -392,12 +442,12 @@ export default function DoctorsNearMe() {
 
     // Expose click triggers from Leaflet popup HTML safely
     window.__getDirectionsFromHome = (doctorId) => {
-      const doc = doctors.find(d => d.id === doctorId);
+      const doc = displayedDoctors.find(d => d.id === doctorId) || doctors.find(d => d.id === doctorId);
       if (doc) handleFindDirection(doc);
     };
 
     window.__bookDoctorFromMap = (doctorId) => {
-      const doc = doctors.find(d => d.id === doctorId);
+      const doc = displayedDoctors.find(d => d.id === doctorId) || doctors.find(d => d.id === doctorId);
       if (doc) handleBookDoctor(doc);
     };
 
@@ -433,7 +483,7 @@ export default function DoctorsNearMe() {
       }
     }
 
-  }, [homeLocation, doctors, activeRouteDoctor, roadRouteInfo]);
+  }, [homeLocation, displayedDoctors, activeRouteDoctor, roadRouteInfo]);
 
   const handleBookDoctor = (doc) => {
     if (!user) {
@@ -598,6 +648,41 @@ export default function DoctorsNearMe() {
             ))}
           </div>
         )}
+
+        {/* Visiting Chamber / Pharmacy Quick Filter Rail */}
+        <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)' }}>
+            <Building2 size={15} />
+            <span>Visiting Chamber / Pharmacy:</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => handleChamberChange('')}
+            className={`btn btn-xs ${!selectedChamber ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ fontSize: '0.78rem', padding: '3px 12px', borderRadius: '16px' }}
+            id="pill-chamber-all"
+          >
+            All Chambers ({chambersList.length})
+          </button>
+
+          {chambersList.map(ch => {
+            const label = ch.shortName || ch.name;
+            const isSelected = selectedChamber === ch.name || selectedChamber === label;
+            return (
+              <button
+                key={ch.id || ch.name}
+                type="button"
+                onClick={() => handleChamberChange(isSelected ? '' : label)}
+                className={`btn btn-xs ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.78rem', padding: '3px 12px', borderRadius: '16px' }}
+                id={`pill-chamber-${ch.id}`}
+              >
+                🏥 {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Filter Dropdowns Card */}
@@ -688,6 +773,28 @@ export default function DoctorsNearMe() {
               <option value="">All Departments</option>
               {departments.map(d => (
                 <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Visiting Chamber Dropdown */}
+          <div>
+            <label htmlFor="filter-chamber-select" className="form-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Building2 size={13} color="var(--primary)" />
+              <strong>Chamber Name</strong>
+            </label>
+            <select
+              className="form-select"
+              value={selectedChamber}
+              onChange={(e) => handleChamberChange(e.target.value)}
+              id="filter-chamber-select"
+              style={{ fontWeight: 600 }}
+            >
+              <option value="">All Visiting Chambers</option>
+              {chambersList.map(ch => (
+                <option key={ch.id || ch.name} value={ch.shortName || ch.name}>
+                  {ch.shortName || ch.name} ({ch.city})
+                </option>
               ))}
             </select>
           </div>
@@ -866,7 +973,7 @@ export default function DoctorsNearMe() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>
-              Doctors in West Bengal ({doctors.length})
+              Doctors in West Bengal ({displayedDoctors.length})
             </h2>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               Sorted by Proximity to Home
@@ -874,7 +981,7 @@ export default function DoctorsNearMe() {
           </div>
 
           <div style={{ maxHeight: '600px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', paddingRight: '4px' }}>
-            {doctors.map(doc => {
+            {displayedDoctors.map(doc => {
               const name = formatDoctorName(doc.name);
               const photo = doc.photoUrl || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400';
               const fee = formatCurrency(doc.consultationFee);
@@ -978,6 +1085,46 @@ export default function DoctorsNearMe() {
                     </p>
                   )}
 
+                  {/* Doctor's Visiting Chamber & Exact Sitting Slots */}
+                  {(() => {
+                    const docChambers = chambersList.filter(ch => {
+                      const slots = ch.slots || ch.visitingDoctors || [];
+                      return slots.some(s => s.doctorId === doc.id) ||
+                        (doc.clinicAddress && doc.clinicAddress.toLowerCase().includes((ch.shortName || ch.name).toLowerCase()));
+                    });
+                    if (docChambers.length === 0) return null;
+                    return (
+                      <div style={{
+                        background: 'var(--primary-subtle)',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: '6px',
+                        padding: '8px 10px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px'
+                      }}>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Building2 size={12} />
+                          <span>Visiting Chamber & Schedule:</span>
+                        </div>
+                        {docChambers.map(ch => {
+                          const slots = ch.slots || ch.visitingDoctors || [];
+                          const mySlot = slots.find(s => s.doctorId === doc.id);
+                          return (
+                            <div key={ch.id || ch.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                              <span>🏥 {ch.shortName || ch.name}</span>
+                              {mySlot?.timeSlot && (
+                                <span style={{ color: 'var(--primary)', fontWeight: 700 }}>
+                                  ⏰ {mySlot.timeSlot}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
                   {/* Distance & Action Buttons */}
                   <div style={{
                     display: 'flex',
@@ -1023,9 +1170,19 @@ export default function DoctorsNearMe() {
               );
             })}
 
-            {doctors.length === 0 && !loading && (
+            {displayedDoctors.length === 0 && !loading && (
               <div className="card" style={{ textAlign: 'center', padding: '3rem 1.5rem', color: 'var(--text-muted)' }}>
-                No doctors found matching the selected area or specialty. Try choosing "All Cities" or "All Localities".
+                <Building2 size={36} style={{ margin: '0 auto 12px auto', opacity: 0.4 }} />
+                <p style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '8px' }}>
+                  No doctors found matching the selected chamber or filters.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  className="btn btn-secondary btn-sm"
+                >
+                  Reset All Filters
+                </button>
               </div>
             )}
           </div>
