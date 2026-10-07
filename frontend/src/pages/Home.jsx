@@ -121,16 +121,56 @@ export default function Home() {
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
-          <Link to="/doctors" className="btn btn-primary btn-lg" id="btn-hero-doctors">
-            <MapPin size={20} />
-            <span>Find Doctors Near Me</span>
-            <ArrowRight size={18} />
-          </Link>
+          {user?.role === 'ROLE_DOCTOR' ? (
+            <>
+              <Link to="/doctor/dashboard" className="btn btn-primary btn-lg" id="btn-hero-doctor-console">
+                <Stethoscope size={20} />
+                <span>Open Doctor Console</span>
+                <ArrowRight size={18} />
+              </Link>
+              <Link to="/doctor/patients" className="btn btn-secondary btn-lg" id="btn-hero-doctor-patients">
+                <UserCheck size={20} color="var(--primary)" />
+                <span>Patient Clinical Directory</span>
+              </Link>
+            </>
+          ) : user?.role === 'ROLE_ADMIN' ? (
+            <>
+              <Link to="/admin/analytics" className="btn btn-primary btn-lg" id="btn-hero-admin-analytics">
+                <ShieldCheck size={20} />
+                <span>Admin Analytics & KPI</span>
+                <ArrowRight size={18} />
+              </Link>
+              <Link to="/admin/audit-logs" className="btn btn-secondary btn-lg" id="btn-hero-admin-audit">
+                <FileText size={20} color="var(--primary)" />
+                <span>Security Audit Trail</span>
+              </Link>
+            </>
+          ) : user?.role === 'ROLE_PHARMACIST_RECEPTIONIST' ? (
+            <>
+              <Link to="/pharmacy/dashboard" className="btn btn-primary btn-lg" id="btn-hero-pharmacy-desk">
+                <Clock size={20} />
+                <span>Pharmacy & Dispensing Desk</span>
+                <ArrowRight size={18} />
+              </Link>
+              <Link to="/pharmacy/chambers" className="btn btn-secondary btn-lg" id="btn-hero-pharmacy-chambers">
+                <Calendar size={20} color="var(--primary)" />
+                <span>Visiting Doctor Chambers</span>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link to="/doctors" className="btn btn-primary btn-lg" id="btn-hero-doctors">
+                <MapPin size={20} />
+                <span>Find Doctors Near Me</span>
+                <ArrowRight size={18} />
+              </Link>
 
-          <Link to="/ai-screener" className="btn btn-secondary btn-lg" id="btn-hero-ai-screener">
-            <Bot size={20} color="var(--primary)" />
-            <span>Check Symptoms & Top 3 Doctors</span>
-          </Link>
+              <Link to="/ai-screener" className="btn btn-secondary btn-lg" id="btn-hero-ai-screener">
+                <Bot size={20} color="var(--primary)" />
+                <span>Check Symptoms & Top 3 Doctors</span>
+              </Link>
+            </>
+          )}
         </div>
       </div>
 

@@ -15,7 +15,10 @@ import {
   Stethoscope,
   Sun,
   Moon,
-  UserCheck
+  UserCheck,
+  Building2,
+  Users,
+  ShieldCheck
 } from 'lucide-react';
 import { formatDoctorName } from '../utils/formatters';
 
@@ -83,47 +86,51 @@ export default function Navbar() {
 
         {/* Navigation Links - Simple everyday healthcare wording */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Link
-            to="/doctors"
-            id="nav-link-doctors"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '7px 12px',
-              borderRadius: 'var(--radius-md)',
-              textDecoration: 'none',
-              fontSize: '0.885rem',
-              fontWeight: 600,
-              color: isActive('/doctors') ? 'var(--primary)' : 'var(--text-secondary)',
-              background: isActive('/doctors') ? 'var(--primary-subtle)' : 'transparent',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <MapPin size={16} />
-            <span>Find Doctors</span>
-          </Link>
+          {(!user || user.role === 'ROLE_PATIENT') && (
+            <>
+              <Link
+                to="/doctors"
+                id="nav-link-doctors"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  textDecoration: 'none',
+                  fontSize: '0.885rem',
+                  fontWeight: 600,
+                  color: isActive('/doctors') ? 'var(--primary)' : 'var(--text-secondary)',
+                  background: isActive('/doctors') ? 'var(--primary-subtle)' : 'transparent',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <MapPin size={16} />
+                <span>Find Doctors</span>
+              </Link>
 
-          <Link
-            to="/ai-screener"
-            id="nav-link-screener"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '7px 12px',
-              borderRadius: 'var(--radius-md)',
-              textDecoration: 'none',
-              fontSize: '0.885rem',
-              fontWeight: 600,
-              color: isActive('/ai-screener') ? 'var(--primary)' : 'var(--text-secondary)',
-              background: isActive('/ai-screener') ? 'var(--primary-subtle)' : 'transparent',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <Bot size={16} />
-            <span>Check Symptoms</span>
-          </Link>
+              <Link
+                to="/ai-screener"
+                id="nav-link-screener"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  textDecoration: 'none',
+                  fontSize: '0.885rem',
+                  fontWeight: 600,
+                  color: isActive('/ai-screener') ? 'var(--primary)' : 'var(--text-secondary)',
+                  background: isActive('/ai-screener') ? 'var(--primary-subtle)' : 'transparent',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Bot size={16} />
+                <span>Check Symptoms</span>
+              </Link>
+            </>
+          )}
 
           {user && (user.role === 'ROLE_PATIENT' || user.role === 'ROLE_ADMIN') && (
             <Link
@@ -193,7 +200,7 @@ export default function Navbar() {
             </>
           )}
 
-          {/* Doctor Links: Console + Personal Profile */}
+          {/* Doctor Links: Console + Patient Clinical Directory + Personal Profile */}
           {user?.role === 'ROLE_DOCTOR' && (
             <>
               <Link
@@ -214,6 +221,26 @@ export default function Navbar() {
               >
                 <Stethoscope size={16} />
                 <span>Doctor Console</span>
+              </Link>
+
+              <Link
+                to="/doctor/patients"
+                id="nav-link-doctor-patients"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  textDecoration: 'none',
+                  fontSize: '0.885rem',
+                  fontWeight: 600,
+                  color: isActive('/doctor/patients') ? 'var(--primary)' : 'var(--text-secondary)',
+                  background: isActive('/doctor/patients') ? 'var(--primary-subtle)' : 'transparent'
+                }}
+              >
+                <Users size={16} />
+                <span>Patient Directory</span>
               </Link>
 
               <Link
@@ -238,50 +265,94 @@ export default function Navbar() {
             </>
           )}
 
-          {/* Staff Links */}
+          {/* Pharmacy / Reception Links: Dispensing Queue + Visiting Chambers */}
           {user?.role === 'ROLE_PHARMACIST_RECEPTIONIST' && (
-            <Link
-              to="/pharmacy/dashboard"
-              id="nav-link-pharmacy-dashboard"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '7px 12px',
-                borderRadius: 'var(--radius-md)',
-                textDecoration: 'none',
-                fontSize: '0.885rem',
-                fontWeight: 600,
-                color: isActive('/pharmacy/dashboard') ? 'var(--primary)' : 'var(--text-secondary)',
-                background: isActive('/pharmacy/dashboard') ? 'var(--primary-subtle)' : 'transparent'
-              }}
-            >
-              <Pill size={16} />
-              <span>Pharmacy & Desk</span>
-            </Link>
+            <>
+              <Link
+                to="/pharmacy/dashboard"
+                id="nav-link-pharmacy-dashboard"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  textDecoration: 'none',
+                  fontSize: '0.885rem',
+                  fontWeight: 600,
+                  color: isActive('/pharmacy/dashboard') ? 'var(--primary)' : 'var(--text-secondary)',
+                  background: isActive('/pharmacy/dashboard') ? 'var(--primary-subtle)' : 'transparent'
+                }}
+              >
+                <Pill size={16} />
+                <span>Pharmacy & Desk</span>
+              </Link>
+
+              <Link
+                to="/pharmacy/chambers"
+                id="nav-link-pharmacy-chambers"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  textDecoration: 'none',
+                  fontSize: '0.885rem',
+                  fontWeight: 600,
+                  color: isActive('/pharmacy/chambers') ? 'var(--primary)' : 'var(--text-secondary)',
+                  background: isActive('/pharmacy/chambers') ? 'var(--primary-subtle)' : 'transparent'
+                }}
+              >
+                <Building2 size={16} />
+                <span>Doctor Chambers</span>
+              </Link>
+            </>
           )}
 
-          {/* Admin Links */}
+          {/* Admin Links: Analytics + Immutable Audit Logs */}
           {user?.role === 'ROLE_ADMIN' && (
-            <Link
-              to="/admin/analytics"
-              id="nav-link-admin-analytics"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '7px 12px',
-                borderRadius: 'var(--radius-md)',
-                textDecoration: 'none',
-                fontSize: '0.885rem',
-                fontWeight: 600,
-                color: isActive('/admin/analytics') ? 'var(--primary)' : 'var(--text-secondary)',
-                background: isActive('/admin/analytics') ? 'var(--primary-subtle)' : 'transparent'
-              }}
-            >
-              <BarChart3 size={16} />
-              <span>Admin Analytics</span>
-            </Link>
+            <>
+              <Link
+                to="/admin/analytics"
+                id="nav-link-admin-analytics"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  textDecoration: 'none',
+                  fontSize: '0.885rem',
+                  fontWeight: 600,
+                  color: isActive('/admin/analytics') ? 'var(--primary)' : 'var(--text-secondary)',
+                  background: isActive('/admin/analytics') ? 'var(--primary-subtle)' : 'transparent'
+                }}
+              >
+                <BarChart3 size={16} />
+                <span>Admin Analytics</span>
+              </Link>
+
+              <Link
+                to="/admin/audit-logs"
+                id="nav-link-admin-audit"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  textDecoration: 'none',
+                  fontSize: '0.885rem',
+                  fontWeight: 600,
+                  color: isActive('/admin/audit-logs') ? 'var(--primary)' : 'var(--text-secondary)',
+                  background: isActive('/admin/audit-logs') ? 'var(--primary-subtle)' : 'transparent'
+                }}
+              >
+                <ShieldCheck size={16} />
+                <span>Security Audit Trail</span>
+              </Link>
+            </>
           )}
         </div>
 

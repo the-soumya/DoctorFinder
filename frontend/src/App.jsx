@@ -14,7 +14,10 @@ import UserProfile from './pages/UserProfile';
 import DoctorDashboard from './pages/DoctorDashboard';
 import DoctorProfile from './pages/DoctorProfile';
 import PharmacyReceptionDashboard from './pages/PharmacyReceptionDashboard';
+import PharmacyChambers from './pages/PharmacyChambers';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminAuditLogs from './pages/AdminAuditLogs';
+import DoctorPatients from './pages/DoctorPatients';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -84,6 +87,16 @@ export default function App() {
                   }
                 />
 
+                {/* Doctor Patient Clinical Directory */}
+                <Route
+                  path="/doctor/patients"
+                  element={
+                    <ProtectedRoute allowedRoles={['ROLE_DOCTOR', 'ROLE_ADMIN']}>
+                      <DoctorPatients />
+                    </ProtectedRoute>
+                  }
+                />
+
                 {/* Doctor Personal Profile */}
                 <Route
                   path="/doctor/profile"
@@ -104,12 +117,32 @@ export default function App() {
                   }
                 />
 
-                {/* Admin Analytics & Audit Trail */}
+                {/* Pharmacy Visiting Doctor Chambers & Scheduler */}
+                <Route
+                  path="/pharmacy/chambers"
+                  element={
+                    <ProtectedRoute allowedRoles={['ROLE_PHARMACIST_RECEPTIONIST', 'ROLE_ADMIN']}>
+                      <PharmacyChambers />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Admin Analytics */}
                 <Route
                   path="/admin/analytics"
                   element={
                     <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
                       <AdminDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Admin Security Audit Logs & Compliance */}
+                <Route
+                  path="/admin/audit-logs"
+                  element={
+                    <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
+                      <AdminAuditLogs />
                     </ProtectedRoute>
                   }
                 />
