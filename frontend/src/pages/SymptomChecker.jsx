@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import SlotBookingModal from '../components/SlotBookingModal';
 import { 
@@ -19,6 +20,8 @@ import {
 import { formatDoctorName, formatCurrency, formatTriageUrgency } from '../utils/formatters';
 
 export default function SymptomChecker() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [symptomsInput, setSymptomsInput] = useState('');
   const [messages, setMessages] = useState([
     {
@@ -30,7 +33,19 @@ export default function SymptomChecker() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedDoctorForBooking, setSelectedDoctorForBooking] = useState(null);
-  const navigate = useNavigate();
+
+  const handleBookDoctor = (doc) => {
+    if (!user) {
+      navigate('/login', {
+        state: {
+          returnUrl: '/ai-screener',
+          message: `Please sign in or create an account to book an appointment with ${formatDoctorName(doc?.name)}.`
+        }
+      });
+      return;
+    }
+    setSelectedDoctorForBooking(doc);
+  };
 
   const sampleSymptoms = [
     "Chest heaviness and shortness of breath when walking or climbing stairs",
@@ -431,7 +446,7 @@ export default function SymptomChecker() {
                                 </div>
 
                                 <button
-                                  onClick={() => setSelectedDoctorForBooking(doc)}
+                                  onClick={() => handleBookDoctor(doc)}
                                   className="btn btn-primary btn-sm"
                                   style={{ width: '100%', marginTop: '4px' }}
                                 >

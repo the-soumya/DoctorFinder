@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import SlotBookingModal from '../components/SlotBookingModal';
@@ -27,12 +27,45 @@ import { formatDoctorName, formatCurrency } from '../utils/formatters';
 
 export default function Home() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [allDoctors, setAllDoctors] = useState([]);
   const [pharmacies, setPharmacies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCity, setSelectedCity] = useState('All');
   const [doctorSearch, setDoctorSearch] = useState('');
   const [bookingDoctor, setBookingDoctor] = useState(null);
+
+  const handleBookDoctor = (doc) => {
+    if (!user) {
+      navigate('/login', {
+        state: {
+          returnUrl: '/',
+          message: `Please sign in or create an account to book an appointment with ${formatDoctorName(doc?.name)}.`
+        }
+      });
+      return;
+    }
+    setBookingDoctor(doc);
+  };
+
+  const handleBookChamber = (pharmacy) => {
+    if (!user) {
+      navigate('/login', {
+        state: {
+          returnUrl: '/',
+          message: `Please sign in or create an account to book an appointment at ${pharmacy?.name || 'this chamber'}.`
+        }
+      });
+      return;
+    }
+    if (pharmacy.slots && pharmacy.slots.length > 0) {
+      const firstDocId = pharmacy.slots[0].doctorId;
+      const docObj = allDoctors.find(d => d.id === firstDocId);
+      if (docObj) {
+        setBookingDoctor(docObj);
+      }
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -324,20 +357,14 @@ export default function Home() {
                   <span>{pharmacy.phone}</span>
                 </div>
 
-                <a
-                  href="#all-doctors"
+                <button
+                  type="button"
                   className="btn btn-primary btn-sm"
-                  onClick={() => {
-                    if (pharmacy.slots && pharmacy.slots.length > 0) {
-                      const firstDocId = pharmacy.slots[0].doctorId;
-                      const docObj = allDoctors.find(d => d.id === firstDocId);
-                      if (docObj) setBookingDoctor(docObj);
-                    }
-                  }}
+                  onClick={() => handleBookChamber(pharmacy)}
                 >
                   <Calendar size={14} />
                   <span>Book at this Chamber</span>
-                </a>
+                </button>
               </div>
             </div>
           ))}
@@ -439,7 +466,7 @@ export default function Home() {
                 </div>
 
                 <button
-                  onClick={() => setBookingDoctor(doc)}
+                  onClick={() => handleBookDoctor(doc)}
                   className="btn btn-primary btn-sm"
                   style={{ width: '100%' }}
                 >
@@ -527,7 +554,7 @@ export default function Home() {
                 </div>
 
                 <button
-                  onClick={() => setBookingDoctor(doc)}
+                  onClick={() => handleBookDoctor(doc)}
                   className="btn btn-primary btn-sm"
                   style={{ width: '100%' }}
                 >

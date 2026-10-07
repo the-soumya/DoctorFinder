@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogIn, Key, Mail, Shield, AlertCircle, ArrowRight, UserCheck, Stethoscope, Pill, ShieldCheck, Eye, EyeOff, Clock } from 'lucide-react';
 
@@ -10,13 +10,22 @@ export default function Login() {
   const [error, setError] = useState('');
   const { login, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleLoginSuccess = (role) => {
+    if (role === 'ROLE_PATIENT' && location.state?.returnUrl) {
+      navigate(location.state.returnUrl);
+    } else {
+      redirectByRole(role);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     const res = await login(email, password);
     if (res.success) {
-      redirectByRole(res.user.role);
+      handleLoginSuccess(res.user.role);
     } else {
       setError(res.message);
     }
@@ -46,7 +55,7 @@ export default function Login() {
     setError('');
     const res = await login(demoEmail, demoPassword);
     if (res.success) {
-      redirectByRole(res.user.role);
+      handleLoginSuccess(res.user.role);
     } else {
       setError(res.message);
     }
@@ -84,6 +93,25 @@ export default function Login() {
               Access your appointments, prescriptions, and health records
             </p>
           </div>
+
+          {location.state?.message && !error && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '12px 16px',
+              background: 'rgba(2, 132, 199, 0.12)',
+              border: '1px solid rgba(2, 132, 199, 0.35)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--primary)',
+              marginBottom: '1.5rem',
+              fontSize: '0.885rem',
+              fontWeight: 600
+            }} id="login-redirect-notice">
+              <AlertCircle size={18} style={{ flexShrink: 0 }} />
+              <span>{location.state.message}</span>
+            </div>
+          )}
 
           {error && (
             <div style={{
@@ -226,7 +254,7 @@ export default function Login() {
 
           <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
             Don't have an account?{' '}
-            <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
+            <Link to="/register" state={location.state} style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
               Create an account
             </Link>
           </div>

@@ -437,7 +437,12 @@ export default function DoctorsNearMe() {
 
   const handleBookDoctor = (doc) => {
     if (!user) {
-      navigate('/login');
+      navigate('/login', {
+        state: {
+          returnUrl: '/doctors',
+          message: `Please sign in or create an account to book an appointment with ${formatDoctorName(doc?.name)}.`
+        }
+      });
       return;
     }
     setSelectedDoctorForBooking(doc);

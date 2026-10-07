@@ -19,11 +19,10 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminAuditLogs from './pages/AdminAuditLogs';
 import DoctorPatients from './pages/DoctorPatients';
 
-// Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user } = useAuth();
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ returnUrl: window.location.pathname, message: 'Please sign in to access this page.' }} replace />;
   }
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/" replace />;

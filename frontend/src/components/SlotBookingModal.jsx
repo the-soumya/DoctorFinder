@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import confetti from 'canvas-confetti';
 import { QRCodeSVG } from 'qrcode.react';
@@ -21,6 +22,7 @@ import { formatDoctorName, formatCurrency } from '../utils/formatters';
 
 export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(0);
   const [selectedTime, setSelectedTime] = useState('10:00:00');
   const [step, setStep] = useState('SELECT'); // 'SELECT', 'HOLDING', 'PAYMENT', 'SUCCESS', 'ERROR'
@@ -99,8 +101,31 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
     return () => clearInterval(timer);
   }, [step, timeLeft]);
 
+  // Redirect immediately if user is logged out
+  useEffect(() => {
+    if (!user) {
+      if (onClose) onClose();
+      navigate('/login', {
+        state: {
+          returnUrl: window.location.pathname,
+          message: `Please sign in or create an account to book an appointment with ${docName}.`
+        }
+      });
+    }
+  }, [user, docName, navigate, onClose]);
+
   // Hold slot (locks DB slot & sets 10-minute hold expiry)
   const handleHoldSlot = async () => {
+    if (!user) {
+      if (onClose) onClose();
+      navigate('/login', {
+        state: {
+          returnUrl: window.location.pathname,
+          message: `Please sign in or create an account to book an appointment with ${docName}.`
+        }
+      });
+      return;
+    }
     setErrorMessage('');
     setStep('HOLDING');
     try {
@@ -232,6 +257,8 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
     const secs = seconds % 60;
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
+
+  if (!user) return null;
 
   return (
     <div className="modal-overlay">

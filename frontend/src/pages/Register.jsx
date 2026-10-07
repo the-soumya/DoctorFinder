@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { UserPlus, User, Mail, Key, Phone, Stethoscope, AlertCircle, ArrowRight, Eye, EyeOff, CheckCircle, XCircle, Clock } from 'lucide-react';
@@ -58,6 +58,7 @@ export default function Register() {
   const [successMsg, setSuccessMsg] = useState('');
   const { signup, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const strength = getPasswordStrength(formData.password);
   const passwordRules = {
@@ -100,9 +101,15 @@ export default function Register() {
     }
     const res = await signup(formData);
     if (res.success) {
-      if (res.user.role === 'ROLE_DOCTOR') navigate('/doctor/dashboard');
-      else if (res.user.role === 'ROLE_PHARMACIST_RECEPTIONIST') navigate('/pharmacy/dashboard');
-      else navigate('/patient/appointments');
+      if (res.user.role === 'ROLE_PATIENT' && location.state?.returnUrl) {
+        navigate(location.state.returnUrl);
+      } else if (res.user.role === 'ROLE_DOCTOR') {
+        navigate('/doctor/dashboard');
+      } else if (res.user.role === 'ROLE_PHARMACIST_RECEPTIONIST') {
+        navigate('/pharmacy/dashboard');
+      } else {
+        navigate('/patient/appointments');
+      }
     } else {
       if (res.message && res.message.toLowerCase().includes('pending')) {
         setSuccessMsg(res.message);
@@ -144,6 +151,25 @@ export default function Register() {
               Join AuraHealth as a Patient, Doctor, or Clinic Staff
             </p>
           </div>
+
+          {location.state?.message && !error && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '12px 16px',
+              background: 'rgba(2, 132, 199, 0.12)',
+              border: '1px solid rgba(2, 132, 199, 0.35)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--primary)',
+              marginBottom: '1.5rem',
+              fontSize: '0.885rem',
+              fontWeight: 600
+            }} id="register-redirect-notice">
+              <AlertCircle size={18} style={{ flexShrink: 0 }} />
+              <span>{location.state.message}</span>
+            </div>
+          )}
 
           {error && (
             <div style={{
@@ -507,7 +533,7 @@ export default function Register() {
 
           <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
             Already have an account?{' '}
-            <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
+            <Link to="/login" state={location.state} style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
               Sign In
             </Link>
           </div>
