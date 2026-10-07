@@ -1536,6 +1536,23 @@ public class DataInitializer implements CommandLineRunner {
         upsertSlot(pKonnagar, "dr.debolina@hospital.com", "Tue, Thu", "05:30 PM - 07:30 PM", "Chamber B", new BigDecimal("700.00"), 20);
         upsertSlot(pKonnagar, "dr.ananya@hospital.com", "Wednesday & Sunday", "11:00 AM - 01:00 PM", "Chamber A", new BigDecimal("600.00"), 15);
 
+        Pharmacy pKonnagarNiramoy = upsertPharmacy(
+                "Konnagar Niramoy Pharmacy & Polyclinic",
+                "WB-PHA-2024-8846",
+                "niramoy.konnagar@health.com",
+                "Station Road West, Near Konnagar Railway Station",
+                "Konnagar",
+                "Hooghly",
+                "West Bengal",
+                "Station Road",
+                22.7010,
+                88.3490,
+                "+91 98312 11223",
+                "08:00 AM - 10:00 PM"
+        );
+        upsertSlot(pKonnagarNiramoy, "dr.souvik@hospital.com", "Mon, Wed, Fri", "05:00 PM - 07:00 PM", "Chamber 1", new BigDecimal("500.00"), 20);
+        upsertSlot(pKonnagarNiramoy, "dr.tanmoy@hospital.com", "Tue, Thu, Sat", "10:30 AM - 12:30 PM", "Chamber 2", new BigDecimal("550.00"), 20);
+
         // 3. Howrah Chambers
         Pharmacy pHowrah = upsertPharmacy(
                 "Shibpur Sanjeevani Pharmacy & Chambers",
@@ -1554,23 +1571,232 @@ public class DataInitializer implements CommandLineRunner {
         upsertSlot(pHowrah, "dr.anupam@hospital.com", "Mon, Wed, Fri", "06:00 PM - 08:00 PM", "Chamber 1", new BigDecimal("750.00"), 20);
         upsertSlot(pHowrah, "dr.sharmistha@hospital.com", "Tue, Thu, Sat", "11:00 AM - 01:00 PM", "Chamber 2", new BigDecimal("450.00"), 25);
 
-        // 4. Kolkata Chambers
-        Pharmacy pKolkata = upsertPharmacy(
-                "Apollo Pharmacy & Visiting Chamber - Salt Lake",
-                "WB-PHA-2024-9301",
-                "kolkata.pharmacy@health.com",
-                "Sector 1, Salt Lake City, Kolkata",
-                "Kolkata",
-                "Kolkata",
+        Pharmacy pGolabari = upsertPharmacy(
+                "Golabari Central Chemist & Doctors Chamber",
+                "WB-PHA-2024-9202",
+                "golabari.pharmacy@health.com",
+                "Opposite Howrah Railway Station, Golabari, Howrah",
+                "Howrah",
+                "Howrah",
                 "West Bengal",
-                "Salt Lake Sector 1",
-                22.5867,
-                88.4178,
-                "+91 98301 22334",
+                "Howrah Station Road",
+                22.5890,
+                88.3410,
+                "+91 98300 22334",
+                "07:30 AM - 11:00 PM"
+        );
+        upsertSlot(pGolabari, "dr.rajat@hospital.com", "Mon, Wed, Sat", "05:30 PM - 07:30 PM", "Chamber A", new BigDecimal("600.00"), 20);
+        upsertSlot(pGolabari, "dr.poushali@hospital.com", "Tue, Thu", "04:00 PM - 06:00 PM", "Chamber B", new BigDecimal("500.00"), 20);
+
+        // 4. Bally Chambers
+        Pharmacy pBally = upsertPharmacy(
+                "Bally Bazar LifeCare Pharmacy & Chamber",
+                "WB-PHA-2024-9210",
+                "bally.pharmacy@health.com",
+                "Near Bally Bazar Tram Depot / Market, Bally",
+                "Bally",
+                "Howrah",
+                "West Bengal",
+                "Bally Bazar",
+                22.6520,
+                88.3440,
+                "+91 98301 44556",
                 "08:00 AM - 10:00 PM"
         );
-        upsertSlot(pKolkata, "dr.anupam@hospital.com", "Tue, Thu", "06:30 PM - 08:00 PM", "Chamber 1", new BigDecimal("800.00"), 20);
-        upsertSlot(pKolkata, "dr.sharmistha@hospital.com", "Wed, Fri", "04:30 PM - 06:30 PM", "Chamber 2", new BigDecimal("500.00"), 20);
+        upsertSlot(pBally, "dr.debasis@hospital.com", "Mon, Wed, Fri", "09:30 AM - 12:00 PM", "Chamber 1", new BigDecimal("400.00"), 25);
+        upsertSlot(pBally, "dr.suparna@hospital.com", "Tue, Thu, Sat", "06:00 PM - 08:00 PM", "Chamber 2", new BigDecimal("700.00"), 20);
+
+        Pharmacy pBelur = upsertPharmacy(
+                "Belur Math Swasthya Kendra & Chemists",
+                "WB-PHA-2024-9211",
+                "belur.pharmacy@health.com",
+                "GT Road near Belur Math Gate, Belur, Bally",
+                "Bally",
+                "Howrah",
+                "West Bengal",
+                "Belur Math GT Road",
+                22.6310,
+                88.3530,
+                "+91 98301 55667",
+                "08:00 AM - 09:30 PM"
+        );
+        upsertSlot(pBelur, "dr.arnab@hospital.com", "Mon, Thu, Sat", "05:00 PM - 07:00 PM", "Chamber A", new BigDecimal("600.00"), 20);
+        upsertSlot(pBelur, "dr.madhumita@hospital.com", "Wed, Sun", "11:00 AM - 01:00 PM", "Chamber B", new BigDecimal("500.00"), 15);
+
+        // 5. Rishra Chambers
+        Pharmacy pRishra = upsertPharmacy(
+                "Care & Cure Chemists & Doctor Chamber",
+                "WB-PHA-2024-9220",
+                "rishra.pharmacy@health.com",
+                "GT Road near Jayashree Textiles, Rishra",
+                "Rishra",
+                "Hooghly",
+                "West Bengal",
+                "GT Road Rishra",
+                22.7140,
+                88.3560,
+                "+91 98399 22110",
+                "08:00 AM - 10:00 PM"
+        );
+        upsertSlot(pRishra, "dr.tapan@hospital.com", "Mon, Wed, Fri", "06:00 PM - 08:00 PM", "Chamber 1", new BigDecimal("400.00"), 25);
+        upsertSlot(pRishra, "dr.sangeeta@hospital.com", "Tue, Thu, Sat", "05:30 PM - 07:30 PM", "Chamber 2", new BigDecimal("700.00"), 20);
+
+        Pharmacy pRishraStation = upsertPharmacy(
+                "Rishra Station Road Medicare & Polyclinic",
+                "WB-PHA-2024-9221",
+                "rishra.station.pharmacy@health.com",
+                "Near Rishra Railway Station Platform 1, Rishra",
+                "Rishra",
+                "Hooghly",
+                "West Bengal",
+                "Rishra Station Road",
+                22.7110,
+                88.3480,
+                "+91 98399 33221",
+                "07:30 AM - 10:30 PM"
+        );
+        upsertSlot(pRishraStation, "dr.somnath@hospital.com", "Mon, Thu, Sat", "10:30 AM - 12:30 PM", "Chamber A", new BigDecimal("600.00"), 20);
+        upsertSlot(pRishraStation, "dr.barnali@hospital.com", "Wed, Fri", "05:00 PM - 07:00 PM", "Chamber B", new BigDecimal("500.00"), 20);
+
+        // 6. Serampore Chambers
+        Pharmacy pSerampore = upsertPharmacy(
+                "Serampore Battala Polyclinic & Chemists",
+                "WB-PHA-2024-9230",
+                "serampore.pharmacy@health.com",
+                "Near Serampore Railway Station Platform 2, Battala, Serampore",
+                "Serampore",
+                "Hooghly",
+                "West Bengal",
+                "Battala / Station Road",
+                22.7520,
+                88.3370,
+                "+91 98313 11223",
+                "08:00 AM - 10:30 PM"
+        );
+        upsertSlot(pSerampore, "dr.joydeep@hospital.com", "Mon, Wed, Fri", "05:30 PM - 07:30 PM", "Chamber 1", new BigDecimal("750.00"), 20);
+        upsertSlot(pSerampore, "dr.rina@hospital.com", "Tue, Thu, Sat", "10:00 AM - 12:30 PM", "Chamber 2", new BigDecimal("450.00"), 25);
+
+        Pharmacy pWalsh = upsertPharmacy(
+                "Walsh Court Compound Health Point",
+                "WB-PHA-2024-9231",
+                "walsh.pharmacy@health.com",
+                "Court Compound near Walsh Sub-divisional Hospital, Serampore",
+                "Serampore",
+                "Hooghly",
+                "West Bengal",
+                "Walsh Hospital Road",
+                22.7550,
+                88.3450,
+                "+91 98313 22334",
+                "08:00 AM - 10:00 PM"
+        );
+        upsertSlot(pWalsh, "dr.kunal@hospital.com", "Mon, Thu", "06:00 PM - 08:00 PM", "Chamber A", new BigDecimal("650.00"), 20);
+        upsertSlot(pWalsh, "dr.monalisa@hospital.com", "Wed, Sat", "04:30 PM - 06:30 PM", "Chamber B", new BigDecimal("500.00"), 20);
+
+        // 7. Chandannagar Chambers
+        Pharmacy pChandannagar = upsertPharmacy(
+                "Chandannagar Strand PolyClinic & Chemists",
+                "WB-PHA-2024-9240",
+                "chandannagar.pharmacy@health.com",
+                "Strand Road overlooking River Hooghly, Chandannagar",
+                "Chandannagar",
+                "Hooghly",
+                "West Bengal",
+                "Chandannagar Strand",
+                22.8680,
+                88.3710,
+                "+91 98314 11223",
+                "08:00 AM - 10:00 PM"
+        );
+        upsertSlot(pChandannagar, "dr.supratim@hospital.com", "Mon, Wed, Fri", "06:00 PM - 08:00 PM", "Chamber 1", new BigDecimal("750.00"), 20);
+        upsertSlot(pChandannagar, "dr.archana@hospital.com", "Tue, Thu, Sat", "10:30 AM - 12:30 PM", "Chamber 2", new BigDecimal("400.00"), 25);
+
+        Pharmacy pBarabazar = upsertPharmacy(
+                "Barabazar Swasthya Bhaban & Pharmacy",
+                "WB-PHA-2024-9241",
+                "barabazar.pharmacy@health.com",
+                "Barabazar Commercial Crossing, Chandannagar",
+                "Chandannagar",
+                "Hooghly",
+                "West Bengal",
+                "Barabazar",
+                22.8690,
+                88.3680,
+                "+91 98314 22334",
+                "08:00 AM - 09:30 PM"
+        );
+        upsertSlot(pBarabazar, "dr.somen@hospital.com", "Mon, Thu, Sat", "05:00 PM - 07:00 PM", "Chamber A", new BigDecimal("600.00"), 20);
+        upsertSlot(pBarabazar, "dr.piyali@hospital.com", "Wed, Sun", "11:00 AM - 01:00 PM", "Chamber B", new BigDecimal("550.00"), 15);
+
+        // 8. Chinsurah Chambers
+        Pharmacy pChinsurah = upsertPharmacy(
+                "Chinsurah Clock Tower Health Point & Chemists",
+                "WB-PHA-2024-9250",
+                "chinsurah.pharmacy@health.com",
+                "Chinsurah Clock Tower Chaurasta, GT Road",
+                "Chinsurah",
+                "Hooghly",
+                "West Bengal",
+                "Clock Tower / GT Road",
+                22.9020,
+                88.3950,
+                "+91 98315 11223",
+                "08:00 AM - 10:30 PM"
+        );
+        upsertSlot(pChinsurah, "dr.bhaswati@hospital.com", "Mon, Wed, Fri", "05:30 PM - 07:30 PM", "Chamber 1", new BigDecimal("450.00"), 25);
+        upsertSlot(pChinsurah, "dr.soumen@hospital.com", "Tue, Thu, Sat", "06:00 PM - 08:00 PM", "Chamber 2", new BigDecimal("750.00"), 20);
+
+        Pharmacy pPipulpati = upsertPharmacy(
+                "Pipulpati Medical Chamber & Pharmacy",
+                "WB-PHA-2024-9251",
+                "pipulpati.pharmacy@health.com",
+                "Pipulpati More near Hooghly Mohsin College, Chinsurah",
+                "Chinsurah",
+                "Hooghly",
+                "West Bengal",
+                "Pipulpati",
+                22.8980,
+                88.3890,
+                "+91 98315 22334",
+                "08:00 AM - 10:00 PM"
+        );
+        upsertSlot(pPipulpati, "dr.ranjan@hospital.com", "Mon, Thu", "06:00 PM - 08:00 PM", "Chamber A", new BigDecimal("650.00"), 20);
+        upsertSlot(pPipulpati, "dr.swati@hospital.com", "Wed, Sat", "11:00 AM - 01:00 PM", "Chamber B", new BigDecimal("500.00"), 20);
+
+        // 9. Bandel Chambers
+        Pharmacy pBandel = upsertPharmacy(
+                "Bandel Junction Medical Chamber & Pharmacy",
+                "WB-PHA-2024-9260",
+                "bandel.pharmacy@health.com",
+                "Station Road near Bandel Railway Junction",
+                "Bandel",
+                "Hooghly",
+                "West Bengal",
+                "Bandel Junction Station Road",
+                22.9240,
+                88.3760,
+                "+91 98316 11223",
+                "07:30 AM - 10:30 PM"
+        );
+        upsertSlot(pBandel, "dr.pradipta@hospital.com", "Mon, Wed, Fri", "06:00 PM - 08:30 PM", "Chamber 1", new BigDecimal("400.00"), 25);
+        upsertSlot(pBandel, "dr.anuradha@hospital.com", "Tue, Thu, Sat", "05:30 PM - 07:30 PM", "Chamber 2", new BigDecimal("700.00"), 20);
+
+        Pharmacy pBasilica = upsertPharmacy(
+                "Basilica Bandel Church Road Health Point",
+                "WB-PHA-2024-9261",
+                "basilica.pharmacy@health.com",
+                "Near Historic Basilica of the Holy Rosary (Bandel Church)",
+                "Bandel",
+                "Hooghly",
+                "West Bengal",
+                "Bandel Church Road",
+                22.9200,
+                88.3880,
+                "+91 98316 22334",
+                "08:00 AM - 09:30 PM"
+        );
+        upsertSlot(pBasilica, "dr.subhasis@hospital.com", "Mon, Thu, Sat", "10:30 AM - 12:30 PM", "Chamber A", new BigDecimal("600.00"), 20);
+        upsertSlot(pBasilica, "dr.rituja@hospital.com", "Wed, Sun", "04:30 PM - 06:30 PM", "Chamber B", new BigDecimal("500.00"), 15);
 
         // Seed a sample chamber appointment for patient1 at Makhla Medicare if none exists for that pharmacy
         User patient1 = userRepository.findByEmail("patient@health.com").orElse(null);

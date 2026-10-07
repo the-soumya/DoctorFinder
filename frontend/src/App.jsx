@@ -49,6 +49,7 @@ export default function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/doctors" element={<DoctorsNearMe />} />
+                  <Route path="/chambers" element={<Home />} />
                   <Route path="/ai-screener" element={<SymptomChecker />} />
                   <Route path="/chamber/live-display" element={<ChamberLiveDisplay />} />
 

@@ -22,12 +22,10 @@ import {
   Tv
 } from 'lucide-react';
 import { formatDoctorName } from '../utils/formatters';
-import { useLanguage } from '../context/LanguageContext';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { language, toggleLanguage, t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -49,19 +47,20 @@ export default function Navbar() {
       position: 'sticky',
       top: 0,
       zIndex: 1000,
-      padding: '0 1.5rem',
+      padding: '0 1.25rem',
       boxShadow: 'var(--shadow-sm)'
     }}>
       <div style={{
-        maxWidth: '1350px',
+        maxWidth: '1440px',
         margin: '0 auto',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        height: '68px'
+        height: '68px',
+        gap: '12px'
       }}>
         {/* Brand Logo */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }} id="nav-brand-logo">
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }} id="nav-brand-logo">
           <div style={{
             background: 'var(--primary)',
             color: '#FFFFFF',
@@ -71,24 +70,26 @@ export default function Navbar() {
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <Heart size={22} fill="#FFFFFF" />
+            <Heart size={20} fill="#FFFFFF" />
           </div>
           <div>
             <span style={{
               fontFamily: 'var(--font-heading)',
-              fontSize: '1.35rem',
+              fontSize: '1.3rem',
               fontWeight: 800,
               color: 'var(--text-primary)',
-              letterSpacing: '-0.02em'
+              letterSpacing: '-0.02em',
+              display: 'block',
+              lineHeight: 1.15
             }}>AuraHealth</span>
-            <span style={{ fontSize: '0.65rem', display: 'block', color: 'var(--text-muted)', letterSpacing: '0.04em', fontWeight: 700 }}>
+            <span style={{ fontSize: '0.62rem', display: 'block', color: 'var(--text-muted)', letterSpacing: '0.04em', fontWeight: 700 }}>
               HOSPITAL & TELEHEALTH PORTAL
             </span>
           </div>
         </Link>
 
-        {/* Navigation Links - Simple everyday healthcare wording */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        {/* Navigation Links - Proper, clean, professional healthcare wording */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
           {(!user || user.role === 'ROLE_PATIENT') && (
             <>
               <Link
@@ -98,10 +99,10 @@ export default function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 12px',
+                  padding: '7px 11px',
                   borderRadius: 'var(--radius-md)',
                   textDecoration: 'none',
-                  fontSize: '0.885rem',
+                  fontSize: '0.865rem',
                   fontWeight: 600,
                   color: isActive('/doctors') ? 'var(--primary)' : 'var(--text-secondary)',
                   background: isActive('/doctors') ? 'var(--primary-subtle)' : 'transparent',
@@ -113,16 +114,37 @@ export default function Navbar() {
               </Link>
 
               <Link
+                to="/chambers"
+                id="nav-link-chambers"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 11px',
+                  borderRadius: 'var(--radius-md)',
+                  textDecoration: 'none',
+                  fontSize: '0.865rem',
+                  fontWeight: 600,
+                  color: isActive('/chambers') || location.hash === '#chambers-section' ? 'var(--primary)' : 'var(--text-secondary)',
+                  background: isActive('/chambers') || location.hash === '#chambers-section' ? 'var(--primary-subtle)' : 'transparent',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Building2 size={16} />
+                <span>Chambers</span>
+              </Link>
+
+              <Link
                 to="/ai-screener"
                 id="nav-link-screener"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 12px',
+                  padding: '7px 11px',
                   borderRadius: 'var(--radius-md)',
                   textDecoration: 'none',
-                  fontSize: '0.885rem',
+                  fontSize: '0.865rem',
                   fontWeight: 600,
                   color: isActive('/ai-screener') ? 'var(--primary)' : 'var(--text-secondary)',
                   background: isActive('/ai-screener') ? 'var(--primary-subtle)' : 'transparent',
@@ -130,7 +152,7 @@ export default function Navbar() {
                 }}
               >
                 <Bot size={16} />
-                <span>{t('checkSymptoms') || 'Check Symptoms'}</span>
+                <span>AI Symptoms</span>
               </Link>
 
               <Link
@@ -140,19 +162,19 @@ export default function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 12px',
+                  padding: '7px 11px',
                   borderRadius: 'var(--radius-md)',
                   textDecoration: 'none',
-                  fontSize: '0.885rem',
+                  fontSize: '0.865rem',
                   fontWeight: 600,
                   color: isActive('/chamber/live-display') ? '#10B981' : 'var(--text-secondary)',
-                  background: isActive('/chamber/live-display') ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                  background: isActive('/chamber/live-display') ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
                   transition: 'all 0.15s ease'
                 }}
                 title="Fullscreen Chamber Waiting Room TV Display with Voice Calling"
               >
                 <Tv size={16} color="#10B981" />
-                <span>{t('liveWaitingScreen') || 'Live TV Display'}</span>
+                <span>Lounge TV</span>
               </Link>
             </>
           )}
@@ -165,10 +187,10 @@ export default function Navbar() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '7px 12px',
+                padding: '7px 11px',
                 borderRadius: 'var(--radius-md)',
                 textDecoration: 'none',
-                fontSize: '0.885rem',
+                fontSize: '0.865rem',
                 fontWeight: 600,
                 color: isActive('/lab-reports') ? 'var(--primary)' : 'var(--text-secondary)',
                 background: isActive('/lab-reports') ? 'var(--primary-subtle)' : 'transparent',
@@ -180,7 +202,7 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* Patient Links: Appointments + Health Profile */}
+          {/* Patient Links: Appointments + Profile */}
           {user?.role === 'ROLE_PATIENT' && (
             <>
               <Link
@@ -190,17 +212,18 @@ export default function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 12px',
+                  padding: '7px 11px',
                   borderRadius: 'var(--radius-md)',
                   textDecoration: 'none',
-                  fontSize: '0.885rem',
+                  fontSize: '0.865rem',
                   fontWeight: 600,
                   color: isActive('/patient/appointments') ? 'var(--primary)' : 'var(--text-secondary)',
-                  background: isActive('/patient/appointments') ? 'var(--primary-subtle)' : 'transparent'
+                  background: isActive('/patient/appointments') ? 'var(--primary-subtle)' : 'transparent',
+                  transition: 'all 0.15s ease'
                 }}
               >
                 <Calendar size={16} />
-                <span>My Appointments</span>
+                <span>Appointments</span>
               </Link>
 
               <Link
@@ -210,22 +233,23 @@ export default function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 12px',
+                  padding: '7px 11px',
                   borderRadius: 'var(--radius-md)',
                   textDecoration: 'none',
-                  fontSize: '0.885rem',
+                  fontSize: '0.865rem',
                   fontWeight: 600,
                   color: isActive('/patient/profile') ? 'var(--primary)' : 'var(--text-secondary)',
-                  background: isActive('/patient/profile') ? 'var(--primary-subtle)' : 'transparent'
+                  background: isActive('/patient/profile') ? 'var(--primary-subtle)' : 'transparent',
+                  transition: 'all 0.15s ease'
                 }}
               >
                 <User size={16} />
-                <span>My Health Profile</span>
+                <span>My Profile</span>
               </Link>
             </>
           )}
 
-          {/* Doctor Links: Console + Patient Clinical Directory + Personal Profile */}
+          {/* Doctor Links: Console + Patient Directory + Profile + Lounge TV */}
           {user?.role === 'ROLE_DOCTOR' && (
             <>
               <Link
@@ -235,10 +259,10 @@ export default function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 12px',
+                  padding: '7px 11px',
                   borderRadius: 'var(--radius-md)',
                   textDecoration: 'none',
-                  fontSize: '0.885rem',
+                  fontSize: '0.865rem',
                   fontWeight: 600,
                   color: isActive('/doctor/dashboard') ? 'var(--primary)' : 'var(--text-secondary)',
                   background: isActive('/doctor/dashboard') ? 'var(--primary-subtle)' : 'transparent'
@@ -255,10 +279,10 @@ export default function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 12px',
+                  padding: '7px 11px',
                   borderRadius: 'var(--radius-md)',
                   textDecoration: 'none',
-                  fontSize: '0.885rem',
+                  fontSize: '0.865rem',
                   fontWeight: 600,
                   color: isActive('/doctor/patients') ? 'var(--primary)' : 'var(--text-secondary)',
                   background: isActive('/doctor/patients') ? 'var(--primary-subtle)' : 'transparent'
@@ -275,22 +299,42 @@ export default function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 12px',
+                  padding: '7px 11px',
                   borderRadius: 'var(--radius-md)',
                   textDecoration: 'none',
-                  fontSize: '0.885rem',
+                  fontSize: '0.865rem',
                   fontWeight: 600,
                   color: isActive('/doctor/profile') ? 'var(--primary)' : 'var(--text-secondary)',
                   background: isActive('/doctor/profile') ? 'var(--primary-subtle)' : 'transparent'
                 }}
               >
                 <UserCheck size={16} />
-                <span>Personal Profile</span>
+                <span>Doctor Profile</span>
+              </Link>
+
+              <Link
+                to="/chamber/live-display"
+                id="nav-link-doctor-tv"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 11px',
+                  borderRadius: 'var(--radius-md)',
+                  textDecoration: 'none',
+                  fontSize: '0.865rem',
+                  fontWeight: 600,
+                  color: '#10B981',
+                  background: isActive('/chamber/live-display') ? 'rgba(16, 185, 129, 0.12)' : 'transparent'
+                }}
+              >
+                <Tv size={16} color="#10B981" />
+                <span>Lounge TV</span>
               </Link>
             </>
           )}
 
-          {/* Pharmacy / Reception Links: Dispensing Queue + Visiting Chambers */}
+          {/* Pharmacy / Reception Links: Dispensing Desk + Doctor Chambers + Attendance + Directory */}
           {user?.role === 'ROLE_PHARMACIST_RECEPTIONIST' && (
             <>
               <Link
@@ -300,17 +344,17 @@ export default function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 12px',
+                  padding: '7px 11px',
                   borderRadius: 'var(--radius-md)',
                   textDecoration: 'none',
-                  fontSize: '0.885rem',
+                  fontSize: '0.865rem',
                   fontWeight: 600,
                   color: isActive('/pharmacy/dashboard') ? 'var(--primary)' : 'var(--text-secondary)',
                   background: isActive('/pharmacy/dashboard') ? 'var(--primary-subtle)' : 'transparent'
                 }}
               >
                 <Pill size={16} />
-                <span>Pharmacy & Desk</span>
+                <span>Pharmacy Desk</span>
               </Link>
 
               <Link
@@ -320,17 +364,17 @@ export default function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 12px',
+                  padding: '7px 11px',
                   borderRadius: 'var(--radius-md)',
                   textDecoration: 'none',
-                  fontSize: '0.885rem',
+                  fontSize: '0.865rem',
                   fontWeight: 600,
                   color: isActive('/pharmacy/chambers') ? 'var(--primary)' : 'var(--text-secondary)',
                   background: isActive('/pharmacy/chambers') ? 'var(--primary-subtle)' : 'transparent'
                 }}
               >
                 <Building2 size={16} />
-                <span>Doctor Chambers</span>
+                <span>Chamber Schedules</span>
               </Link>
 
               <Link
@@ -340,10 +384,10 @@ export default function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 12px',
+                  padding: '7px 11px',
                   borderRadius: 'var(--radius-md)',
                   textDecoration: 'none',
-                  fontSize: '0.885rem',
+                  fontSize: '0.865rem',
                   fontWeight: 600,
                   color: isActive('/pharmacy/attendance') ? 'var(--primary)' : 'var(--text-secondary)',
                   background: isActive('/pharmacy/attendance') ? 'var(--primary-subtle)' : 'transparent'
@@ -360,10 +404,10 @@ export default function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 12px',
+                  padding: '7px 11px',
                   borderRadius: 'var(--radius-md)',
                   textDecoration: 'none',
-                  fontSize: '0.885rem',
+                  fontSize: '0.865rem',
                   fontWeight: 600,
                   color: isActive('/pharmacy/doctors') ? 'var(--primary)' : 'var(--text-secondary)',
                   background: isActive('/pharmacy/doctors') ? 'var(--primary-subtle)' : 'transparent'
@@ -372,10 +416,30 @@ export default function Navbar() {
                 <Users size={16} />
                 <span>Doctors & Contacts</span>
               </Link>
+
+              <Link
+                to="/chamber/live-display"
+                id="nav-link-pharmacy-tv"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 11px',
+                  borderRadius: 'var(--radius-md)',
+                  textDecoration: 'none',
+                  fontSize: '0.865rem',
+                  fontWeight: 600,
+                  color: '#10B981',
+                  background: isActive('/chamber/live-display') ? 'rgba(16, 185, 129, 0.12)' : 'transparent'
+                }}
+              >
+                <Tv size={16} color="#10B981" />
+                <span>Lounge TV</span>
+              </Link>
             </>
           )}
 
-          {/* Admin Links: Analytics + Immutable Audit Logs */}
+          {/* Admin Links: Analytics + Audit Logs + Lounge TV */}
           {user?.role === 'ROLE_ADMIN' && (
             <>
               <Link
@@ -385,10 +449,10 @@ export default function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 12px',
+                  padding: '7px 11px',
                   borderRadius: 'var(--radius-md)',
                   textDecoration: 'none',
-                  fontSize: '0.885rem',
+                  fontSize: '0.865rem',
                   fontWeight: 600,
                   color: isActive('/admin/analytics') ? 'var(--primary)' : 'var(--text-secondary)',
                   background: isActive('/admin/analytics') ? 'var(--primary-subtle)' : 'transparent'
@@ -405,40 +469,49 @@ export default function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '7px 12px',
+                  padding: '7px 11px',
                   borderRadius: 'var(--radius-md)',
                   textDecoration: 'none',
-                  fontSize: '0.885rem',
+                  fontSize: '0.865rem',
                   fontWeight: 600,
                   color: isActive('/admin/audit-logs') ? 'var(--primary)' : 'var(--text-secondary)',
                   background: isActive('/admin/audit-logs') ? 'var(--primary-subtle)' : 'transparent'
                 }}
               >
                 <ShieldCheck size={16} />
-                <span>Security Audit Trail</span>
+                <span>Audit Logs</span>
+              </Link>
+
+              <Link
+                to="/chamber/live-display"
+                id="nav-link-admin-tv"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 11px',
+                  borderRadius: 'var(--radius-md)',
+                  textDecoration: 'none',
+                  fontSize: '0.865rem',
+                  fontWeight: 600,
+                  color: '#10B981',
+                  background: isActive('/chamber/live-display') ? 'rgba(16, 185, 129, 0.12)' : 'transparent'
+                }}
+              >
+                <Tv size={16} color="#10B981" />
+                <span>Lounge TV</span>
               </Link>
             </>
           )}
         </div>
 
-        {/* Right side: Theme Toggle & Auth controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Language Toggle Button (English / বাংলা) */}
-          <button
-            onClick={toggleLanguage}
-            className="btn btn-secondary btn-sm"
-            style={{ borderRadius: 'var(--radius-md)', padding: '5px 10px', fontWeight: 800, fontSize: '0.785rem' }}
-            title={language === 'en' ? 'বাংলা ভাষায় দেখুন (Switch to Bengali)' : 'Switch to English'}
-            id="language-toggle-btn"
-          >
-            {language === 'en' ? 'বাংলা' : 'EN'}
-          </button>
-
+        {/* Right side: Theme Toggle & User controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           {/* Medical Theme Toggle Button */}
           <button
             onClick={toggleTheme}
             className="btn btn-secondary btn-sm"
-            style={{ borderRadius: 'var(--radius-full)', padding: '6px 10px' }}
+            style={{ borderRadius: 'var(--radius-full)', padding: '6px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Medical Mode'}
             id="theme-toggle-btn"
           >
@@ -447,15 +520,15 @@ export default function Navbar() {
 
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              <div style={{ textAlign: 'right', lineHeight: 1.2 }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {displayName}
                 </div>
                 <div style={{
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
+                  fontSize: '0.675rem',
+                  fontWeight: 800,
                   color: 'var(--primary)',
-                  letterSpacing: '0.03em',
+                  letterSpacing: '0.04em',
                   textTransform: 'uppercase'
                 }}>
                   {roleLabel}
@@ -467,7 +540,7 @@ export default function Navbar() {
                 onClick={logout}
                 className="btn btn-secondary btn-sm"
                 title="Logout"
-                style={{ borderRadius: 'var(--radius-md)' }}
+                style={{ borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '5px' }}
               >
                 <LogOut size={15} />
                 <span>Logout</span>

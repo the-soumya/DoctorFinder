@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import SlotBookingModal from '../components/SlotBookingModal';
@@ -31,6 +31,7 @@ import { formatDoctorName, formatCurrency } from '../utils/formatters';
 export default function Home() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [allDoctors, setAllDoctors] = useState(DEFAULT_REAL_DOCTORS);
   const [pharmacies, setPharmacies] = useState(DEFAULT_REAL_CHAMBERS.map(normalizeChamber));
   const [loading, setLoading] = useState(true);
@@ -39,6 +40,16 @@ export default function Home() {
   const [chamberSearch, setChamberSearch] = useState('');
   const [doctorSearch, setDoctorSearch] = useState('');
   const [bookingDoctor, setBookingDoctor] = useState(null);
+
+  // Auto-scroll to visiting chamber network if route is /chambers or #chambers-section
+  useEffect(() => {
+    if (location.pathname === '/chambers' || location.hash === '#chambers-section') {
+      const el = document.getElementById('chambers-section');
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 120);
+      }
+    }
+  }, [location.pathname, location.hash]);
 
   const handleBookDoctor = (doc) => {
     if (!user) {
