@@ -13,15 +13,12 @@ import PatientDashboard from './pages/PatientDashboard';
 import UserProfile from './pages/UserProfile';
 import DoctorDashboard from './pages/DoctorDashboard';
 import DoctorProfile from './pages/DoctorProfile';
-import PharmacyReceptionDashboard from './pages/PharmacyReceptionDashboard';
 import PharmacyChambers from './pages/PharmacyChambers';
 import PharmacyDoctorsDirectory from './pages/PharmacyDoctorsDirectory';
 import PharmacyAttendance from './pages/PharmacyAttendance';
-import ChamberLiveDisplay from './pages/ChamberLiveDisplay';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminAuditLogs from './pages/AdminAuditLogs';
 import DoctorPatients from './pages/DoctorPatients';
-import { LanguageProvider } from './context/LanguageContext';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user } = useAuth();
@@ -37,9 +34,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 export default function App() {
   return (
     <ThemeProvider>
-      <LanguageProvider>
-        <AuthProvider>
-          <Router>
+      <AuthProvider>
+        <Router>
             <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
               <Navbar />
               <main style={{ flex: 1 }}>
@@ -51,7 +47,6 @@ export default function App() {
                   <Route path="/doctors" element={<DoctorsNearMe />} />
                   <Route path="/chambers" element={<Home />} />
                   <Route path="/ai-screener" element={<SymptomChecker />} />
-                  <Route path="/chamber/live-display" element={<ChamberLiveDisplay />} />
 
                 {/* Patient & Staff Medical Lab Reports */}
                 <Route
@@ -113,14 +108,10 @@ export default function App() {
                   }
                 />
 
-                {/* Pharmacy & Reception Desk */}
+                {/* Pharmacy Attendance / Reception Desk */}
                 <Route
                   path="/pharmacy/dashboard"
-                  element={
-                    <ProtectedRoute allowedRoles={['ROLE_PHARMACIST_RECEPTIONIST', 'ROLE_ADMIN']}>
-                      <PharmacyReceptionDashboard />
-                    </ProtectedRoute>
-                  }
+                  element={<Navigate to="/pharmacy/attendance" replace />}
                 />
 
                 {/* Pharmacy Visiting Doctor Chambers & Scheduler */}
@@ -180,7 +171,6 @@ export default function App() {
           </div>
         </Router>
       </AuthProvider>
-      </LanguageProvider>
     </ThemeProvider>
   );
 }

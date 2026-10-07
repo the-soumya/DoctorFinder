@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import confetti from 'canvas-confetti';
-import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../context/AuthContext';
 import { 
   X, 
@@ -15,23 +14,35 @@ import {
   Timer,
   Lock,
   Mail,
-  Download,
-  QrCode
+  Building2,
+  Check
 } from 'lucide-react';
 import { formatDoctorName, formatCurrency } from '../utils/formatters';
 
-export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) {
+// Helper to convert timeSlot string (e.g. "10:00 AM - 12:30 PM" or "07:00 PM - 08:30 PM") into ISO time "HH:mm:00"
+function extractStartTime(timeSlotStr) {
+  if (!timeSlotStr) return '10:00:00';
+  const match = timeSlotStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (!match) return '10:00:00';
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const modifier = match[3].toUpperCase();
+  if (modifier === 'PM' && hours < 12) hours += 12;
+  if (modifier === 'AM' && hours === 12) hours = 0;
+  return `${hours.toString().padStart(2, '0')}:${minutes}:00`;
+}
+
+export default function SlotBookingModal({ doctor, initialChamber = null, initialSlot = null, onClose, onBookingSuccess }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(0);
-  const [selectedTime, setSelectedTime] = useState('10:00:00');
   const [step, setStep] = useState('SELECT'); // 'SELECT', 'HOLDING', 'PAYMENT', 'SUCCESS', 'ERROR'
   const [heldAppointment, setHeldAppointment] = useState(null);
   const [orderDetails, setOrderDetails] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes hold timer in seconds
   const [paymentProcessing, setPaymentProcessing] = useState(false);
-  const [qrPayload, setQrPayload] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [chamberSlots, setChamberSlots] = useState([]);
   const [selectedChamber, setSelectedChamber] = useState(null);
@@ -41,24 +52,59 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
   const docName = formatDoctorName(doctor?.name);
   const docPhoto = doctor?.photoUrl || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400';
   const docDegree = doctor?.degree || 'MBBS, MD';
-  const docFee = formatCurrency(selectedChamber?.consultationFee || doctor?.consultationFee);
 
-  // Fetch visiting pharmacy chambers for this doctor
+  // Load visiting pharmacy chambers for this doctor
   useEffect(() => {
     if (doctor?.id) {
       api.get(`/pharmacies/doctor/${doctor.id}`)
         .then(res => {
           if (Array.isArray(res.data) && res.data.length > 0) {
             setChamberSlots(res.data);
-            setSelectedChamber(res.data[0]);
+            if (initialChamber) {
+              const matched = res.data.find(c => c.pharmacyId === initialChamber.id || c.pharmacyName === initialChamber.name);
+              setSelectedChamber(matched || res.data[0]);
+            } else {
+              setSelectedChamber(res.data[0]);
+            }
+          } else if (initialChamber && initialSlot) {
+            const fallbackChamber = {
+              id: initialSlot.id || 1,
+              pharmacyId: initialChamber.id,
+              pharmacyName: initialChamber.name,
+              pharmacyAddress: initialChamber.address,
+              locality: initialChamber.locality || initialChamber.city,
+              chamberRoom: initialSlot.chamberRoom || 'Chamber 1',
+              availableDays: initialSlot.availableDays || 'Mon to Sat',
+              timeSlot: initialSlot.timeSlot || '10:00 AM - 12:30 PM',
+              consultationFee: initialSlot.consultationFee || doctor?.consultationFee || 500,
+              maxTokens: initialSlot.maxTokens || 25
+            };
+            setChamberSlots([fallbackChamber]);
+            setSelectedChamber(fallbackChamber);
           }
         })
         .catch(err => {
           console.warn('Could not load doctor visiting chambers:', err);
+          if (initialChamber && initialSlot) {
+            const fallbackChamber = {
+              id: initialSlot.id || 1,
+              pharmacyId: initialChamber.id,
+              pharmacyName: initialChamber.name,
+              pharmacyAddress: initialChamber.address,
+              locality: initialChamber.locality || initialChamber.city,
+              chamberRoom: initialSlot.chamberRoom || 'Chamber 1',
+              availableDays: initialSlot.availableDays || 'Mon to Sat',
+              timeSlot: initialSlot.timeSlot || '10:00 AM - 12:30 PM',
+              consultationFee: initialSlot.consultationFee || doctor?.consultationFee || 500,
+              maxTokens: initialSlot.maxTokens || 25
+            };
+            setChamberSlots([fallbackChamber]);
+            setSelectedChamber(fallbackChamber);
+          }
         })
         .finally(() => setLoadingChambers(false));
     }
-  }, [doctor?.id]);
+  }, [doctor?.id, initialChamber, initialSlot]);
 
   // Generate 5 days starting tomorrow
   const days = Array.from({ length: 5 }, (_, i) => {
@@ -73,14 +119,12 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
     };
   });
 
-  const timeSlots = [
-    { label: '10:00 AM', time: '10:00:00' },
-    { label: '11:30 AM', time: '11:30:00' },
-    { label: '12:00 PM', time: '12:00:00' },
-    { label: '02:00 PM', time: '14:00:00' },
-    { label: '05:30 PM', time: '17:30:00' },
-    { label: '07:00 PM', time: '19:00:00' },
-  ];
+  // Effective fee and time for the selected single slot
+  const currentFee = selectedChamber?.consultationFee || initialSlot?.consultationFee || doctor?.consultationFee || 500;
+  const currentTimeSlot = selectedChamber?.timeSlot || initialSlot?.timeSlot || '10:00 AM - 12:30 PM';
+  const currentChamberName = selectedChamber?.pharmacyName || initialChamber?.name || 'Hospital Central OPD';
+  const currentRoom = selectedChamber?.chamberRoom || initialSlot?.chamberRoom || 'Chamber 1';
+  const currentDays = selectedChamber?.availableDays || initialSlot?.availableDays || 'Mon to Sat';
 
   // 10-minute hold countdown timer
   useEffect(() => {
@@ -114,7 +158,7 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
     }
   }, [user, docName, navigate, onClose]);
 
-  // Hold slot (locks DB slot & sets 10-minute hold expiry)
+  // Hold exactly 1 slot (locks DB slot & sets 10-minute hold expiry)
   const handleHoldSlot = async () => {
     if (!user) {
       if (onClose) onClose();
@@ -126,23 +170,29 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
       });
       return;
     }
+
+    if (isSubmitting) return; // Prevent double-click multi-booking
+    setIsSubmitting(true);
     setErrorMessage('');
     setStep('HOLDING');
+
     try {
       const chosenDay = days[selectedDate];
+      const selectedTime = extractStartTime(currentTimeSlot);
       const slotDatetime = `${chosenDay.isoDate}T${selectedTime}`;
 
-      // 1. Hold slot via concurrency-safe API with chamber and pharmacy binding
+      // 1. Hold exactly 1 slot via concurrency-safe API
       const holdRes = await api.post('/appointments/hold-slot', {
         doctorId: doctor.id,
         slotDatetime,
-        pharmacyId: selectedChamber?.pharmacyId || null,
-        chamberName: selectedChamber ? `${selectedChamber.pharmacyName} (${selectedChamber.chamberRoom || 'Chamber 1'})` : 'Hospital Central OPD'
+        pharmacyId: selectedChamber?.pharmacyId || initialChamber?.id || null,
+        chamberName: `${currentChamberName} (${currentRoom})`
       });
+
       const appt = holdRes.data;
       setHeldAppointment(appt);
 
-      // 2. Generate Razorpay order
+      // 2. Generate Razorpay order for this single slot
       const orderRes = await api.post(`/payments/create-order?appointmentId=${appt.id}`);
       setOrderDetails(orderRes.data);
       setTimeLeft(600);
@@ -150,6 +200,8 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
     } catch (err) {
       setStep('ERROR');
       setErrorMessage(err.response?.data?.message || 'Could not reserve this slot. It may have been selected simultaneously by another patient.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -164,8 +216,8 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
         key: orderDetails.razorpayKeyId,
         amount: orderDetails.amountInPaise,
         currency: orderDetails.currency || 'INR',
-        name: 'AuraHealth Hospital',
-        description: `Consultation with ${docName}`,
+        name: 'AuraHealth Hospital & Chamber Network',
+        description: `Consultation Slot (1 Token) with ${docName}`,
         order_id: orderDetails.orderId,
         handler: async function (response) {
           try {
@@ -221,33 +273,13 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
     }
   };
 
-  const finalizeSuccess = (paymentId) => {
+  const finalizeSuccess = () => {
     confetti({
       particleCount: 80,
       spread: 70,
       origin: { y: 0.6 }
     });
 
-    const chosenDay = days[selectedDate];
-    const appointmentToken = heldAppointment?.id;
-    const chamberDisplayName = selectedChamber ? selectedChamber.pharmacyName : (heldAppointment?.chamberName || 'Hospital Central OPD');
-    const chamberAddr = selectedChamber?.pharmacyAddress || 'Main OPD Desk';
-    const passData = {
-      hospital: 'AuraHealth Medical Network',
-      chamberName: chamberDisplayName,
-      chamberAddress: chamberAddr,
-      appointmentId: appointmentToken,
-      patientName: user?.name || 'Registered Patient',
-      patientEmail: user?.email || 'patient@health.com',
-      doctor: docName,
-      department: doctor?.departmentName,
-      slot: `${chosenDay.dateFormatted} at ${selectedTime.substring(0, 5)}`,
-      paymentId: paymentId || 'CONFIRMED',
-      status: 'CONFIRMED_PAID',
-      qrSecurityCode: `AURA-CHK-${appointmentToken}-${paymentId ? paymentId.slice(-8) : Date.now().toString().slice(-6)}`
-    };
-
-    setQrPayload(JSON.stringify(passData));
     setStep('SUCCESS');
     if (onBookingSuccess) onBookingSuccess();
   };
@@ -261,24 +293,24 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
   if (!user) return null;
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '580px', padding: '1.75rem' }}>
-        {/* Header with Doctor Picture, Name, Degree and Specialization */}
+    <div className="modal-overlay" style={{ zIndex: 1100 }}>
+      <div className="modal-content" style={{ maxWidth: '580px', padding: '1.75rem', position: 'relative' }}>
+        {/* Header */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingBottom: '1.25rem',
           borderBottom: '1px solid var(--border-subtle)',
-          marginBottom: '1.5rem'
+          marginBottom: '1.25rem'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <img
               src={docPhoto}
               alt={docName}
               style={{
-                width: '64px',
-                height: '64px',
+                width: '60px',
+                height: '60px',
                 borderRadius: '50%',
                 objectFit: 'cover',
                 border: '2px solid var(--primary-subtle)',
@@ -290,7 +322,7 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
             />
             <div>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Book Consultation
+                Book 1 Consultation Slot
               </div>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '2px 0' }}>
                 {docName}
@@ -314,16 +346,34 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
           </button>
         </div>
 
-        {/* STEP 1: SELECT SLOT */}
+        {/* STEP 1: SELECT EXACTLY 1 SLOT */}
         {step === 'SELECT' && (
           <div>
-            {/* Visiting Chamber / Pharmacy Selection */}
+            {/* Single Slot Booking Policy Banner */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '9px 12px',
+              background: 'rgba(16, 185, 129, 0.1)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: 'var(--radius-md)',
+              color: '#10B981',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              marginBottom: '1.25rem'
+            }}>
+              <ShieldCheck size={16} color="#10B981" />
+              <span>Single Slot Policy: Exactly 1 consultation slot will be reserved for you.</span>
+            </div>
+
+            {/* Chamber Selection (Choose 1 Chamber & Sitting Slot) */}
             {chamberSlots.length > 0 && (
               <div style={{ marginBottom: '1.25rem' }}>
                 <label className="form-label" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>1. Choose Visiting Chamber</span>
+                  <span>1. Select Chamber Sitting (Only 1 Allowed)</span>
                   <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700 }}>
-                    {chamberSlots.length} Chamber Locations
+                    {chamberSlots.length} {chamberSlots.length === 1 ? 'Chamber' : 'Chambers'} Available
                   </span>
                 </label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
@@ -331,7 +381,7 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
                     const isSelected = selectedChamber?.id === ch.id;
                     return (
                       <div
-                        key={ch.id}
+                        key={ch.id || ch.slotId}
                         onClick={() => setSelectedChamber(ch)}
                         style={{
                           padding: '10px 12px',
@@ -339,29 +389,42 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
                           border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border-medium)',
                           background: isSelected ? 'var(--primary-subtle)' : 'var(--bg-elevated)',
                           cursor: 'pointer',
-                          transition: 'all 0.15s ease'
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '10px'
                         }}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            border: isSelected ? '6px solid var(--primary)' : '2px solid var(--border-medium)',
+                            background: isSelected ? '#FFFFFF' : 'transparent',
+                            flexShrink: 0
+                          }} />
                           <div>
                             <div style={{ fontWeight: 700, fontSize: '0.875rem', color: isSelected ? 'var(--primary)' : 'var(--text-primary)' }}>
                               {ch.pharmacyName}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1px' }}>
                               📍 {ch.pharmacyAddress || ch.locality}
                             </div>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)' }}>
-                              ₹{ch.consultationFee}
-                            </div>
-                            <div style={{ fontSize: '0.725rem', color: 'var(--secondary)', fontWeight: 600 }}>
-                              {ch.timeSlot}
+                            <div style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                              Days: <strong>{ch.availableDays}</strong> &bull; {ch.chamberRoom || 'Chamber 1'}
                             </div>
                           </div>
                         </div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                          Sitting: <strong>{ch.availableDays}</strong> &bull; {ch.chamberRoom || 'Chamber 1'}
+
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--primary)' }}>
+                            ₹{ch.consultationFee}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--secondary)', fontWeight: 700 }}>
+                            ⏰ {ch.timeSlot}
+                          </div>
                         </div>
                       </div>
                     );
@@ -370,10 +433,10 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
               </div>
             )}
 
-            {/* Select Date */}
+            {/* Select 1 Consultation Date */}
             <div style={{ marginBottom: '1.25rem' }}>
               <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>
-                {chamberSlots.length > 0 ? '2.' : '1.'} Select Consultation Date
+                {chamberSlots.length > 0 ? '2.' : '1.'} Select Consultation Date (1 Day)
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
                 {days.map((day) => (
@@ -400,74 +463,53 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
               </div>
             </div>
 
-            {/* Select Time */}
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>
-                2. Select Available Time
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                {timeSlots.map((ts) => (
-                  <button
-                    key={ts.time}
-                    type="button"
-                    onClick={() => setSelectedTime(ts.time)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      padding: '10px',
-                      borderRadius: 'var(--radius-md)',
-                      border: selectedTime === ts.time ? '2px solid var(--primary)' : '1px solid var(--border-medium)',
-                      background: selectedTime === ts.time ? 'var(--primary-subtle)' : 'var(--bg-elevated)',
-                      color: selectedTime === ts.time ? 'var(--primary)' : 'var(--text-primary)',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: 600,
-                      transition: 'all 0.15s ease'
-                    }}
-                    id={`slot-time-${ts.time.replace(/:/g, '')}`}
-                  >
-                    <Clock size={14} />
-                    <span>{ts.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Price & Summary */}
+            {/* Active Single Slot Summary Box */}
             <div style={{
               background: 'var(--bg-elevated)',
-              border: '1px solid var(--border-subtle)',
+              border: '1px solid var(--border-medium)',
               borderRadius: 'var(--radius-md)',
               padding: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
               marginBottom: '1.5rem'
             }}>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-                  Doctor Consultation Fee
-                </div>
-                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary)' }}>
-                  {docFee}
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                  Selected Consultation Slot (1 Slot):
+                </span>
+                <span className="badge badge-confirmed" style={{ fontSize: '0.72rem' }}>
+                  1 Token
+                </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--secondary)', fontWeight: 600 }}>
-                <ShieldCheck size={18} />
-                <span>Instant Confirmation & QR Pass</span>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.825rem' }}>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Chamber: </span>
+                  <strong>{currentChamberName} ({currentRoom})</strong>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Sitting Time: </span>
+                  <strong style={{ color: 'var(--primary)' }}>⏰ {currentTimeSlot}</strong>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Date: </span>
+                  <strong>{days[selectedDate].dayName}, {days[selectedDate].dateFormatted}</strong>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Total Fee: </span>
+                  <strong style={{ color: 'var(--primary)', fontSize: '0.95rem' }}>₹{currentFee}</strong>
+                </div>
               </div>
             </div>
 
+            {/* Confirm & Reserve 1 Slot Button */}
             <button
               onClick={handleHoldSlot}
+              disabled={isSubmitting}
               className="btn btn-primary"
-              style={{ width: '100%', padding: '12px', fontSize: '1rem' }}
+              style={{ width: '100%', padding: '12px', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               id="btn-confirm-hold-slot"
             >
               <Lock size={18} />
-              <span>Reserve Slot & Proceed to Pay</span>
+              <span>{isSubmitting ? 'Reserving Your Slot...' : `Reserve 1 Slot & Pay ${formatCurrency(currentFee)}`}</span>
             </button>
           </div>
         )}
@@ -484,14 +526,14 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
               margin: '0 auto 1.25rem',
               animation: 'spin 1s linear infinite'
             }} />
-            <h3 style={{ fontSize: '1.15rem', marginBottom: '0.5rem', fontWeight: 700 }}>Reserving Appointment Slot...</h3>
+            <h3 style={{ fontSize: '1.15rem', marginBottom: '0.5rem', fontWeight: 700 }}>Reserving 1 Consultation Slot...</h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-              Holding the selected slot for {docName} in the hospital schedule...
+              Holding this single slot for {docName} at {currentChamberName}...
             </p>
           </div>
         )}
 
-        {/* STEP 3: PAYMENT & COUNTDOWN */}
+        {/* STEP 3: PAYMENT & 10-MIN COUNTDOWN */}
         {step === 'PAYMENT' && orderDetails && (
           <div>
             {/* Hold Expiry Banner */}
@@ -508,7 +550,7 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Timer size={18} />
-                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Slot Held For:</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>1 Slot Reserved For:</span>
               </div>
               <div style={{ fontSize: '1.1rem', fontWeight: 800, fontFamily: 'monospace' }} id="hold-countdown-timer">
                 {formatTimer(timeLeft)}
@@ -528,13 +570,19 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
                 <span style={{ fontWeight: 700 }}>{docName}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Qualifications</span>
-                <span style={{ fontWeight: 600, color: 'var(--secondary)' }}>{docDegree}</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Chamber</span>
+                <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{currentChamberName} ({currentRoom})</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Date & Time</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Consultation Date</span>
                 <span style={{ fontWeight: 700 }}>
-                  {days[selectedDate].dateFormatted} at {selectedTime.substring(0, 5)}
+                  {days[selectedDate].dayName}, {days[selectedDate].dateFormatted}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Sitting Time</span>
+                <span style={{ fontWeight: 700, color: 'var(--secondary)' }}>
+                  ⏰ {currentTimeSlot}
                 </span>
               </div>
               <div style={{
@@ -545,8 +593,8 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
                 fontSize: '1.1rem',
                 fontWeight: 800
               }}>
-                <span>Total Amount</span>
-                <span style={{ color: 'var(--primary)' }}>{docFee}</span>
+                <span>Total Amount (1 Slot)</span>
+                <span style={{ color: 'var(--primary)' }}>{formatCurrency(currentFee)}</span>
               </div>
             </div>
 
@@ -559,7 +607,7 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
             >
               <CreditCard size={18} />
               <span>
-                {paymentProcessing ? 'Processing Payment...' : `Pay ${docFee} via Razorpay`}
+                {paymentProcessing ? 'Processing Payment...' : `Pay ${formatCurrency(currentFee)} via Razorpay`}
               </span>
             </button>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '10px' }}>
@@ -568,7 +616,7 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
           </div>
         )}
 
-        {/* STEP 4: SUCCESS WITH QR SCANNER PASS SENT TO EMAIL */}
+        {/* STEP 4: SUCCESS - ONLY TOKEN NUMBER IS GIVEN */}
         {step === 'SUCCESS' && (
           <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
             <div style={{
@@ -590,93 +638,74 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
               Appointment Confirmed!
             </h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
-              Your consultation with <strong>{docName}</strong> is confirmed.
+              Your 1 consultation slot with <strong>{docName}</strong> is confirmed.
             </p>
 
-            {/* Email Notification Alert */}
+            {/* Official Token Number Card */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.08) 0%, rgba(14, 165, 233, 0.04) 100%)',
+              border: '2px dashed var(--primary)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '1.5rem',
+              marginBottom: '1.5rem',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                YOUR CONSULTATION TOKEN NUMBER
+              </div>
+              <div style={{ fontSize: '3.6rem', fontWeight: 900, color: 'var(--primary)', lineHeight: 1.1, margin: '8px 0' }} id="confirmed-token-number">
+                #{String(heldAppointment?.id || 1).padStart(2, '0')}
+              </div>
+              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                {docName} &bull; {currentRoom}
+              </div>
+              <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                📍 {currentChamberName}
+              </div>
+              <div style={{ fontSize: '0.825rem', color: 'var(--primary)', fontWeight: 600, marginTop: '3px' }}>
+                🗓️ {days[selectedDate].dayName}, {days[selectedDate].dateFormatted} &bull; ⏰ {currentTimeSlot}
+              </div>
+              <div style={{ marginTop: '12px', padding: '8px 12px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', fontSize: '0.775rem', color: 'var(--text-muted)' }}>
+                ℹ️ Only 1 slot is booked. Please arrive 15 minutes before your sitting time and quote Token <strong>#{String(heldAppointment?.id || 1).padStart(2, '0')}</strong> at the chamber reception desk.
+              </div>
+            </div>
+
+            {/* Confirmation Email Notice */}
             <div style={{
               background: '#EFF6FF',
               border: '1px solid #BFDBFE',
               borderRadius: 'var(--radius-md)',
-              padding: '12px 14px',
+              padding: '10px 14px',
               marginBottom: '1.25rem',
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
               textAlign: 'left'
             }}>
-              <Mail size={22} color="#2563EB" style={{ flexShrink: 0 }} />
-              <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E40AF' }}>
-                  Check-in QR Code Sent to Your Email!
-                </div>
-                <div style={{ fontSize: '0.8rem', color: '#3B82F6' }}>
-                  A copy of your digital hospital pass has been sent to <strong>{user?.email || 'patient@health.com'}</strong>.
-                </div>
+              <Mail size={18} color="#2563EB" style={{ flexShrink: 0 }} />
+              <div style={{ fontSize: '0.8rem', color: '#1E40AF' }}>
+                Confirmation sent to <strong>{user?.email || 'your email'}</strong> with Token #{String(heldAppointment?.id || 1).padStart(2, '0')}.
               </div>
             </div>
 
-            {/* Digital QR Code Pass Card */}
-            <div style={{
-              background: 'var(--bg-elevated)',
-              border: '2px dashed var(--border-medium)',
-              borderRadius: 'var(--radius-lg)',
-              padding: '1.25rem',
-              marginBottom: '1.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '0.75rem'
-            }}>
-              <div style={{
-                background: '#FFFFFF',
-                padding: '12px',
-                borderRadius: 'var(--radius-md)',
-                boxShadow: 'var(--shadow-sm)'
-              }}>
-                <QRCodeSVG
-                  value={qrPayload || 'AuraHealth-Pass'}
-                  size={150}
-                  level="H"
-                  includeMargin={true}
-                />
-              </div>
-
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-                  Hospital & Visiting Chamber Check-in Pass
-                </div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700, marginTop: '3px' }}>
-                  {selectedChamber?.pharmacyName || heldAppointment?.chamberName || 'Hospital Central OPD'}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  {selectedChamber?.pharmacyAddress || 'Central Consultation OPD Desk'}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  Show this QR code or digital receipt at the pharmacy reception desk upon arrival & exit
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
               <button
                 onClick={() => {
-                  window.print();
+                  if (onClose) onClose();
+                  navigate('/patient/appointments');
                 }}
-                className="btn btn-secondary"
-                style={{ padding: '10px' }}
+                className="btn btn-primary"
+                id="btn-view-appointments"
               >
-                <Download size={16} />
-                <span>Print / Save Pass</span>
+                <span>View in My Appointments</span>
               </button>
 
               <button
                 onClick={onClose}
-                className="btn btn-primary"
-                style={{ padding: '10px' }}
-                id="btn-done-booking"
+                className="btn btn-secondary"
+                id="btn-close-success"
               >
-                Done
+                Close
               </button>
             </div>
           </div>
@@ -686,27 +715,31 @@ export default function SlotBookingModal({ doctor, onClose, onBookingSuccess }) 
         {step === 'ERROR' && (
           <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
             <div style={{
-              width: '52px',
-              height: '52px',
-              margin: '0 auto 1.25rem',
+              width: '56px',
+              height: '56px',
+              margin: '0 auto 1rem',
               background: '#FEF2F2',
+              border: '2px solid #FECACA',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#DC2626'
             }}>
-              <AlertTriangle size={28} />
+              <AlertTriangle size={30} />
             </div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.5rem' }}>Unable to Reserve Slot</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              {errorMessage}
+
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem' }}>
+              Slot Reservation Issue
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+              {errorMessage || 'Unable to reserve this slot. Please select another slot.'}
             </p>
+
             <button
               onClick={() => setStep('SELECT')}
-              className="btn btn-secondary"
-              style={{ padding: '10px 20px' }}
-              id="btn-retry-slot-booking"
+              className="btn btn-primary"
+              id="btn-try-again"
             >
               Choose Another Slot
             </button>

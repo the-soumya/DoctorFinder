@@ -65,6 +65,18 @@ public class AppointmentService {
         User patient = userRepository.findById(patientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Patient not found with ID: " + patientId));
 
+        // Enforce single slot booking: check if patient already has an active pending hold or confirmed appointment
+        List<Appointment> existingPatientAppts = appointmentRepository.findByPatientIdOrderBySlotDatetimeDesc(patientId);
+        boolean hasActiveBooking = existingPatientAppts.stream().anyMatch(a ->
+                a.getDoctor().getId().equals(doctor.getId()) &&
+                a.getSlotDatetime().equals(request.getSlotDatetime()) &&
+                (a.getStatus() == AppointmentStatus.CONFIRMED ||
+                 (a.getStatus() == AppointmentStatus.PENDING && a.getSlotHoldExpiry() != null && a.getSlotHoldExpiry().isAfter(Instant.now())))
+        );
+        if (hasActiveBooking) {
+            throw new ConflictException("You already have an active reservation for this slot. Only 1 slot can be booked per patient.");
+        }
+
         // Concurrency-safe slot lock check: SELECT ... FOR UPDATE
         Optional<Appointment> conflictingOpt = appointmentRepository.findConflictingSlotWithLock(
                 doctor.getId(), request.getSlotDatetime());

@@ -18,8 +18,7 @@ import {
   UserCheck,
   Building2,
   Users,
-  ShieldCheck,
-  Tv
+  ShieldCheck
 } from 'lucide-react';
 import { formatDoctorName } from '../utils/formatters';
 
@@ -153,28 +152,6 @@ export default function Navbar() {
               >
                 <Bot size={16} />
                 <span>AI Symptoms</span>
-              </Link>
-
-              <Link
-                to="/chamber/live-display"
-                id="nav-link-live-display"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 11px',
-                  borderRadius: 'var(--radius-md)',
-                  textDecoration: 'none',
-                  fontSize: '0.865rem',
-                  fontWeight: 600,
-                  color: isActive('/chamber/live-display') ? '#10B981' : 'var(--text-secondary)',
-                  background: isActive('/chamber/live-display') ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
-                  transition: 'all 0.15s ease'
-                }}
-                title="Fullscreen Chamber Waiting Room TV Display with Voice Calling"
-              >
-                <Tv size={16} color="#10B981" />
-                <span>Lounge TV</span>
               </Link>
             </>
           )}
@@ -311,35 +288,15 @@ export default function Navbar() {
                 <UserCheck size={16} />
                 <span>Doctor Profile</span>
               </Link>
-
-              <Link
-                to="/chamber/live-display"
-                id="nav-link-doctor-tv"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 11px',
-                  borderRadius: 'var(--radius-md)',
-                  textDecoration: 'none',
-                  fontSize: '0.865rem',
-                  fontWeight: 600,
-                  color: '#10B981',
-                  background: isActive('/chamber/live-display') ? 'rgba(16, 185, 129, 0.12)' : 'transparent'
-                }}
-              >
-                <Tv size={16} color="#10B981" />
-                <span>Lounge TV</span>
-              </Link>
             </>
           )}
 
-          {/* Pharmacy / Reception Links: Dispensing Desk + Doctor Chambers + Attendance + Directory */}
+          {/* Pharmacy / Reception Links: Attendance + Chamber Schedules + Doctors Directory */}
           {user?.role === 'ROLE_PHARMACIST_RECEPTIONIST' && (
             <>
               <Link
-                to="/pharmacy/dashboard"
-                id="nav-link-pharmacy-dashboard"
+                to="/pharmacy/attendance"
+                id="nav-link-pharmacy-attendance"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -349,12 +306,12 @@ export default function Navbar() {
                   textDecoration: 'none',
                   fontSize: '0.865rem',
                   fontWeight: 600,
-                  color: isActive('/pharmacy/dashboard') ? 'var(--primary)' : 'var(--text-secondary)',
-                  background: isActive('/pharmacy/dashboard') ? 'var(--primary-subtle)' : 'transparent'
+                  color: isActive('/pharmacy/attendance') ? 'var(--primary)' : 'var(--text-secondary)',
+                  background: isActive('/pharmacy/attendance') ? 'var(--primary-subtle)' : 'transparent'
                 }}
               >
-                <Pill size={16} />
-                <span>Pharmacy Desk</span>
+                <UserCheck size={16} />
+                <span>Attendance (In/Out)</span>
               </Link>
 
               <Link
@@ -378,26 +335,6 @@ export default function Navbar() {
               </Link>
 
               <Link
-                to="/pharmacy/attendance"
-                id="nav-link-pharmacy-attendance"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 11px',
-                  borderRadius: 'var(--radius-md)',
-                  textDecoration: 'none',
-                  fontSize: '0.865rem',
-                  fontWeight: 600,
-                  color: isActive('/pharmacy/attendance') ? 'var(--primary)' : 'var(--text-secondary)',
-                  background: isActive('/pharmacy/attendance') ? 'var(--primary-subtle)' : 'transparent'
-                }}
-              >
-                <UserCheck size={16} />
-                <span>Attendance (In/Out)</span>
-              </Link>
-
-              <Link
                 to="/pharmacy/doctors"
                 id="nav-link-pharmacy-doctors"
                 style={{
@@ -416,30 +353,10 @@ export default function Navbar() {
                 <Users size={16} />
                 <span>Doctors & Contacts</span>
               </Link>
-
-              <Link
-                to="/chamber/live-display"
-                id="nav-link-pharmacy-tv"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 11px',
-                  borderRadius: 'var(--radius-md)',
-                  textDecoration: 'none',
-                  fontSize: '0.865rem',
-                  fontWeight: 600,
-                  color: '#10B981',
-                  background: isActive('/chamber/live-display') ? 'rgba(16, 185, 129, 0.12)' : 'transparent'
-                }}
-              >
-                <Tv size={16} color="#10B981" />
-                <span>Lounge TV</span>
-              </Link>
             </>
           )}
 
-          {/* Admin Links: Analytics + Audit Logs + Lounge TV */}
+          {/* Admin Links: Analytics + Audit Logs */}
           {user?.role === 'ROLE_ADMIN' && (
             <>
               <Link
@@ -480,26 +397,6 @@ export default function Navbar() {
               >
                 <ShieldCheck size={16} />
                 <span>Audit Logs</span>
-              </Link>
-
-              <Link
-                to="/chamber/live-display"
-                id="nav-link-admin-tv"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 11px',
-                  borderRadius: 'var(--radius-md)',
-                  textDecoration: 'none',
-                  fontSize: '0.865rem',
-                  fontWeight: 600,
-                  color: '#10B981',
-                  background: isActive('/chamber/live-display') ? 'rgba(16, 185, 129, 0.12)' : 'transparent'
-                }}
-              >
-                <Tv size={16} color="#10B981" />
-                <span>Lounge TV</span>
               </Link>
             </>
           )}

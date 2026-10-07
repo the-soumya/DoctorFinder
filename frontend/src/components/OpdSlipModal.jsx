@@ -1,5 +1,4 @@
 import React, { useRef } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
 import { X, Printer, Download, CheckCircle, Building2, Calendar, Clock, Stethoscope, User, ShieldCheck } from 'lucide-react';
 import { formatDoctorName, formatCurrency } from '../utils/formatters';
 
@@ -21,17 +20,6 @@ export default function OpdSlipModal({ appointment, onClose }) {
   const tokenNum = appointment.tokenNumber || 7;
   const timeSlot = appointment.timeSlot || "10:00 AM - 12:30 PM";
   const chamberRoom = appointment.chamberRoom || "Chamber 1";
-
-  // QR Payload for instant verification at pharmacy desk
-  const qrPayload = JSON.stringify({
-    ref: bookingRef,
-    token: tokenNum,
-    apptId: appointment.id,
-    patient: appointment.patientName || "Patient",
-    doctor: doctorName,
-    chamber: chamberName,
-    date: appointment.slotDatetime || new Date().toISOString()
-  });
 
   return (
     <div style={{
@@ -238,18 +226,21 @@ export default function OpdSlipModal({ appointment, onClose }) {
               </div>
               <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.75rem', color: '#475569', lineHeight: 1.5 }}>
                 <li>Please report at the pharmacy reception desk <strong>15 minutes prior</strong> to sitting time.</li>
-                <li>Present this token slip or show QR code on your mobile device for direct check-in.</li>
+                <li>Present your Token Number <strong>#{String(tokenNum).padStart(2, '0')}</strong> at the desk for queue check-in.</li>
                 <li>Carry all past medical history, prescriptions, and recent diagnostic lab reports.</li>
               </ul>
             </div>
 
-            {/* QR Code Component */}
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ background: '#FFFFFF', padding: '8px', borderRadius: '8px', border: '1px solid #CBD5E1', display: 'inline-block' }}>
-                <QRCodeSVG value={qrPayload} size={90} level="M" />
+            {/* Token Badge */}
+            <div style={{ textAlign: 'center', background: '#F0F9FF', border: '1px solid #BAE6FD', padding: '12px 18px', borderRadius: '10px' }}>
+              <div style={{ fontSize: '0.7rem', color: '#0284C7', fontWeight: 800, textTransform: 'uppercase' }}>
+                Confirmed Token
               </div>
-              <div style={{ fontSize: '0.65rem', color: '#64748B', fontWeight: 700, marginTop: '4px' }}>
-                Scan for Arrival
+              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0369A1' }}>
+                #{String(tokenNum).padStart(2, '0')}
+              </div>
+              <div style={{ fontSize: '0.65rem', color: '#0284C7', fontWeight: 700 }}>
+                Present at Desk
               </div>
             </div>
           </div>

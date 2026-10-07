@@ -22,9 +22,7 @@ import {
   Filter,
   CheckCircle2,
   Phone,
-  Sparkles,
-  RotateCcw,
-  Tv
+  RotateCcw
 } from 'lucide-react';
 import { formatDoctorName, formatCurrency } from '../utils/formatters';
 
@@ -228,9 +226,9 @@ export default function Home() {
             </>
           ) : user?.role === 'ROLE_PHARMACIST_RECEPTIONIST' ? (
             <>
-              <Link to="/pharmacy/dashboard" className="btn btn-primary btn-lg" id="btn-hero-pharmacy-desk">
-                <Clock size={20} />
-                <span>Chamber Reception & QR Desk</span>
+              <Link to="/pharmacy/attendance" className="btn btn-primary btn-lg" id="btn-hero-pharmacy-desk">
+                <UserCheck size={20} />
+                <span>Chamber Attendance (In/Out)</span>
                 <ArrowRight size={18} />
               </Link>
               <Link to="/pharmacy/chambers" className="btn btn-secondary btn-lg" id="btn-hero-pharmacy-chambers">
@@ -254,11 +252,6 @@ export default function Home() {
               <Link to="/ai-screener" className="btn btn-secondary btn-lg" id="btn-hero-ai-screener">
                 <Bot size={20} color="var(--secondary)" />
                 <span>AI Clinical Screener (90%+)</span>
-              </Link>
-
-              <Link to="/chamber/live-display" className="btn btn-secondary btn-lg" id="btn-hero-live-display" style={{ borderColor: 'rgba(16, 185, 129, 0.4)', color: '#10B981' }}>
-                <Tv size={20} color="#10B981" />
-                <span>Live Waiting Room TV Mode</span>
               </Link>
             </>
           )}

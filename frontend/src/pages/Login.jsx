@@ -37,7 +37,7 @@ export default function Login() {
         navigate('/doctor/dashboard');
         break;
       case 'ROLE_PHARMACIST_RECEPTIONIST':
-        navigate('/pharmacy/dashboard');
+        navigate('/pharmacy/attendance');
         break;
       case 'ROLE_ADMIN':
         navigate('/admin/analytics');

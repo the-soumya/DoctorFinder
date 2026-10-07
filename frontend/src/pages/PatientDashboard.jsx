@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { QRCodeSVG } from 'qrcode.react';
 import { 
   Calendar, 
   Clock, 
@@ -14,7 +13,6 @@ import {
   Plus, 
   Trash2,
   XCircle,
-  QrCode,
   User,
   Download,
   Mail,
@@ -34,7 +32,6 @@ export default function PatientDashboard() {
   const [activeTab, setActiveTab] = useState('appointments'); // 'appointments', 'prescriptions', 'allergies'
   const [cancelModalAppt, setCancelModalAppt] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
-  const [viewQrAppt, setViewQrAppt] = useState(null);
   const [selectedOpdSlipAppt, setSelectedOpdSlipAppt] = useState(null);
   const [selectedRxPrescription, setSelectedRxPrescription] = useState(null);
   const [newAllergy, setNewAllergy] = useState({ allergyName: '', medicationName: '', severity: 'MODERATE', notes: '' });
@@ -265,15 +262,6 @@ export default function PatientDashboard() {
                           <span>OPD Slip</span>
                         </button>
 
-                        <button
-                          onClick={() => setViewQrAppt(appt)}
-                          className="btn btn-secondary btn-sm"
-                          style={{ flex: 1, minWidth: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
-                        >
-                          <QrCode size={14} color="var(--primary)" />
-                          <span>QR Pass</span>
-                        </button>
-
                         {prescriptions.some(p => p.appointmentId === appt.id) && (
                           <button
                             onClick={() => setSelectedRxPrescription(prescriptions.find(p => p.appointmentId === appt.id))}
@@ -469,75 +457,7 @@ export default function PatientDashboard() {
       )}
 
       {/* QR Code Pass Modal */}
-      {viewQrAppt && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '440px', padding: '1.75rem', textAlign: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <div style={{ fontWeight: 800, fontSize: '1.15rem' }}>
-                Hospital Arrival Check-in Pass
-              </div>
-              <button
-                onClick={() => setViewQrAppt(null)}
-                className="btn btn-secondary btn-sm"
-                style={{ borderRadius: '50%', width: '32px', height: '32px', padding: 0 }}
-              >
-                <X size={16} />
-              </button>
-            </div>
 
-            <div style={{
-              background: '#FFFFFF',
-              padding: '16px',
-              borderRadius: 'var(--radius-lg)',
-              display: 'inline-block',
-              margin: '0 auto 1.25rem',
-              boxShadow: 'var(--shadow-md)'
-            }}>
-              <QRCodeSVG
-                value={JSON.stringify({
-                  hospital: 'AuraHealth Medical Center',
-                  appointmentId: viewQrAppt.id,
-                  doctor: formatDoctorName(viewQrAppt.doctorName),
-                  patientEmail: user?.email,
-                  date: viewQrAppt.slotDatetime,
-                  status: 'VERIFIED'
-                })}
-                size={180}
-                level="H"
-                includeMargin={true}
-              />
-            </div>
-
-            <div style={{ marginBottom: '1.25rem', textAlign: 'left', background: 'var(--bg-elevated)', padding: '12px 14px', borderRadius: 'var(--radius-md)' }}>
-              <div style={{ fontSize: '0.85rem', marginBottom: '4px' }}>
-                <strong>Doctor:</strong> {formatDoctorName(viewQrAppt.doctorName)} ({viewQrAppt.departmentName})
-              </div>
-              <div style={{ fontSize: '0.85rem', marginBottom: '4px' }}>
-                <strong>Appointment Date:</strong> {new Date(viewQrAppt.slotDatetime).toLocaleString()}
-              </div>
-              <div style={{ fontSize: '0.8rem', color: '#16A34A', fontWeight: 700 }}>
-                ✉️ Emailed to {user?.email || 'patient@health.com'}
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <button
-                onClick={() => window.print()}
-                className="btn btn-secondary btn-sm"
-              >
-                <Download size={15} />
-                <span>Print Pass</span>
-              </button>
-              <button
-                onClick={() => setViewQrAppt(null)}
-                className="btn btn-primary btn-sm"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Cancel Confirmation Modal */}
       {cancelModalAppt && (
